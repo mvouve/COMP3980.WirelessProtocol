@@ -20,6 +20,9 @@
 */
 #define LINE_SIZE 128
 #define CHARS_TO_READ 1
+#define CONTROL_SIZE 2
+#define DATA_SIZE 1018
+#define CRC_SIZE 4
 
 #include <Windows.h>	// Windows API
 #include <string.h>		// String functions
@@ -43,11 +46,18 @@ struct PortInfo {
 	char * strReceive;
 };
 
+struct GrapefruitPacket {
+	char control[CONTROL_SIZE];
+	char data[DATA_SIZE];
+	char crc[CRC_SIZE];
+};
+
 /* Function prototypes used in Physical.cpp */
 void Connect();
 void SetPortSettings(char *, HWND);
 DWORD WINAPI ReadPort(LPVOID);
-void WritePort(char *);
+char * BuildBuffer(char *);
+GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();

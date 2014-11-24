@@ -51,6 +51,7 @@ COLORREF backgroundColorCommand = 0x00AAAAAA;
 COLORREF backgroundColorConnected = 0xCCFFCC;
 
 HWND hwnd;
+HWND button;
 HDC hdc;
 string buffer;
 RECT txtWindow;
@@ -126,6 +127,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 	{
 	case WM_CREATE:
 			hdc = GetDC(hwnd);
+			
 			ReleaseDC(hwnd, hdc);
 		break;
 	case WM_COMMAND:
@@ -135,12 +137,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 
 	case WM_CHAR:							
 			hdc = GetDC(hwnd);			
-			if (isConnected())
-			{
+			//if (isConnected())
+			//{
 				sprintf(strSend, "%c", (char)wParam);
 				// Send chars from keyboard to WritePort()
-				WritePort(strSend);
-			}
+				BuildBuffer(strSend);
+				//WritePort(strSend);
+			//}
 			ReleaseDC(hwnd, hdc);							
 		break;
 
@@ -229,6 +232,14 @@ void InstantiateWindow(HINSTANCE hInst)
 
 	hwnd = CreateWindow(Name, Name, WS_OVERLAPPEDWINDOW ,
 		10, 10, 700, 500, NULL, NULL, hInst, NULL);
+
+	button = CreateWindow( "button", "Label",
+                WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+                100, 200, 
+                50, 20,
+                hwnd, (HMENU) IDM_SEND_BUTTON,
+                hInst, NULL );
+
 }
 
 /**********************************************************************************
@@ -284,6 +295,9 @@ void CheckMenu(WPARAM wP)
 		MessageBox(hwnd, "This program emulates a dumb terminal application.\n"
 			"\n Make sure your port matches the one on your computer."
 			"\n You can set the settings of your port in the Port Settings.", "Help", MB_OK | MB_ICONQUESTION);
+		break;
+	case IDM_SEND_BUTTON:
+
 		break;
 
 	case IDM_EXIT:
