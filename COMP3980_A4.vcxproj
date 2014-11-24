@@ -65,6 +65,7 @@
     <ClInclude Include="Application.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Physical.h" />
+    <ClInclude Include="Protocol.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Session.h" />
   </ItemGroup>

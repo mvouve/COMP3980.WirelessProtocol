@@ -23,6 +23,8 @@
 PortInfo portInfo;
 HWND curHwnd;
 DCB dcb = { 0 };
+char *c = new char[DATA_SIZE];
+GrapefruitPacket packet;
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -237,13 +239,46 @@ bool WaitForPacket(char* packet)
 --		c		- character to be written to the COM port
 --
 /*-----------------------------------------------------------------------------*/
-void WritePort(char * strToSend)
+char * BuildBuffer(char * strToSend)
 {
+	strcat(c, strToSend);
+
+	OutputDebugString(c);
+	return c;
+
 	// Write the character sent to this function to the port.
-	WriteFile(portInfo.hComm, strToSend,
+
+	/*WriteFile(portInfo.hComm, strToSend,
 		GetCommConfig(portInfo.hComm, &portInfo.cc, &portInfo.cc.dwSize),
-		&portInfo.dwWritten, &portInfo.overlapped);
+		&portInfo.dwWritten, &portInfo.overlapped);*/
 	
+}
+
+GrapefruitPacket BuildPacket()
+{
+	int count = 0;
+	while (count < DATA_SIZE)
+	{
+		strcat(packet.data, &c[count]);
+		count++;
+	}
+
+	if (count < DATA_SIZE)
+	{
+		packet.control[0] = EOT;
+		while (count < DATA_SIZE)
+		{
+			//Add padding characters 
+			/*if ()
+			{
+				packet.data[count] = ETX;
+				strcat(packet.data, '\0');
+			}*/
+			count++;
+		}
+	}
+
+	return packet;
 }
 
 /*------------------------------------------------------------------------------

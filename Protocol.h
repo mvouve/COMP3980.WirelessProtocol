@@ -8,3 +8,4 @@
 #define ETB  23
 #define EOT  04
 #define ETB  23
+#define ETX  05
