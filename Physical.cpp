@@ -22,8 +22,6 @@
 PortInfo portInfo;
 HWND curHwnd;
 DCB dcb = { 0 };
-char *c = new char[DATA_SIZE];
-GrapefruitPacket packet;
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -39,7 +37,6 @@ void Connect()
 	
 	portInfo.strReceive = new char[LINE_SIZE]; // Buffer for received characters
 	memset(portInfo.strReceive, 0, sizeof(portInfo.strReceive)); //Initialize the buffer to null
-	memset(c, 0, sizeof(portInfo.strReceive));		
 
 	if ((portInfo.hComm = CreateFile(portInfo.lpszCommName, GENERIC_READ | GENERIC_WRITE, 0,
 		NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
@@ -82,13 +79,11 @@ void Connect()
 **
 /*-----------------------------------------------------------------------------*/
 
-/*
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! NOTE:
 !!	THIS FUNCTION ONLY WORKS AFTER THE CONNECTION IS CREATED
 !!  THIS NEEDS TO BE FIXED.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-*/
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 void SetPortSettings(char *s, HWND hwnd)
 {
 	portInfo.cc.dwSize = sizeof(COMMCONFIG);
@@ -162,7 +157,7 @@ DWORD WINAPI ReadPort(LPVOID n)
 }
 
 /*------------------------------------------------------------------------------
---	FUNCTION: BuildString(char *)
+--	FUNCTION: WritePort(char *)
 --
 --	PURPOSE: Sends characters to the COM port
 --
@@ -170,34 +165,13 @@ DWORD WINAPI ReadPort(LPVOID n)
 --		c		- character to be written to the COM port
 --
 /*-----------------------------------------------------------------------------*/
-char * BuildBuffer(char * strToSend)
+void WritePort(char * strToSend)
 {
-	strcat(c, strToSend);
-
-	OutputDebugString(c);
-	return c;
-
 	// Write the character sent to this function to the port.
-
-	/*WriteFile(portInfo.hComm, strToSend,
+	WriteFile(portInfo.hComm, strToSend,
 		GetCommConfig(portInfo.hComm, &portInfo.cc, &portInfo.cc.dwSize),
-		&portInfo.dwWritten, &portInfo.overlapped);*/
+		&portInfo.dwWritten, &portInfo.overlapped);
 	
-}
-
-GrapefruitPacket BuildPacket()
-{
-	int count = 0;
-	while (count < DATA_SIZE)
-	{
-		strcat(packet.data, &c[count]);
-		count++;
-	}
-
-	if (count < DATA_SIZE)
-	{
-		packet.control[0] = 
-	}
 }
 
 /*------------------------------------------------------------------------------

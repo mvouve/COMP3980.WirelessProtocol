@@ -63,7 +63,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
-    <ClInclude Include="crc.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Physical.h" />
     <ClInclude Include="resource.h" />
@@ -74,7 +73,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
-    <ClCompile Include="crc.c" />
     <ClCompile Include="Physical.cpp" />
     <ClCompile Include="Session.cpp" />
   </ItemGroup>
