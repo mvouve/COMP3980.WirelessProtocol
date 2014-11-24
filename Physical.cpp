@@ -17,6 +17,7 @@
 
 #include "Physical.h"
 #include "Application.h"
+#include "Protocol.h"
 #include <stdio.h>
 
 PortInfo portInfo;
@@ -154,6 +155,77 @@ DWORD WINAPI ReadPort(LPVOID n)
 	}
 	ExitThread(0);
 	return 0L;
+}
+
+/*------------------------------------------------------------------------------
+-- FUNCTION: ReceieveMode()
+--
+-- PURPOSE:  This function reaads the comm port waiting for a signal.
+--           it will try to read MAXSET times, and if it fails it will fall back
+--			 to the invoking function
+--
+-- DESIGNER:
+--
+--
+-- PROGRAMMER: Marc Vouve A00848381
+--
+--
+------------------------------------------------------------------------------*/
+void ReceiveMode()
+{
+	char packet[1024];
+	// The last syn reseived.
+	char syn = SYN1;
+
+	for (int i = 0; i > MAXSENT; i++)
+	{
+		if (!WaitForPacket(packet))
+		{
+			//TO1
+			return;
+		}
+		// validate packet
+		else if (true)
+		{
+			// checks if the second packet character is a syn bit 
+			if (packet[1] == syn)
+			{
+				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
+			}
+			// SEND ACK 
+			if (packet[0] != EOT)
+			{
+				return;
+			}
+		}
+		else
+		{
+			//Send NAK
+		}
+	}
+}
+
+/*------------------------------------------------------------------------------
+-- FUNCTION: bool WaitForPacket(char* packet)
+--
+-- PARAMS:	char* packet: A buffer to read in the recieved packet onto.
+--
+-- PURPOSE:  This function holds the thread for a predefined wait time, reading
+--			 for an incoming packet. when a packet is received it writes the
+--			 data to the packet char*.
+--
+--
+--
+-- DESIGNER: Marc Vouve A00848381
+--
+--
+-- PROGRAMMER: Marc Vouve A00848381
+--
+-- RETURN: True on read false on no incoming packets
+------------------------------------------------------------------------------*/
+bool WaitForPacket(char* packet)
+{
+	return true;
 }
 
 /*------------------------------------------------------------------------------
