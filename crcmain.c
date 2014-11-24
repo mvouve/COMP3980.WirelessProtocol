@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <limits.h>
 
 #include "crc.c"
@@ -24,7 +25,6 @@ void
 main(void)
 {
 	unsigned char  test[] = "123456789";
-	
 	printf("Size of short is %i\n", sizeof(short));
 	printf("Size of int is %i\n", sizeof(int));
 	printf("Size of long is %i\n", sizeof(long));
@@ -44,5 +44,14 @@ main(void)
 	 */
 	crcInit();
 	printf("The crcFast() of \"123456789\" is 0x%X\n", crcFast(test, strlen(test)));
+	int testing = crcFast(test, strlen(test));
+	int *helping = &testing;
+	printf("Test string with crc %s%c%c%c%c\n", test, helping[0],helping[1], helping[2],helping[3]);
+	
+	//How to add the characters to the packet
+	/*packet[1020] = helping[0];
+	packet[1021] = helping[1];
+	packet[1022] = helping[2];
+	packet[1023] = helping[3];*/
 
 }   /* main() */
