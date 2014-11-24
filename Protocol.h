@@ -7,3 +7,4 @@
 #define RVI  17
 #define ETB  23
 #define EOT  04
+#define ETB  23
