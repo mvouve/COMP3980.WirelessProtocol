@@ -52,6 +52,7 @@ COLORREF backgroundColorConnected = 0xCCFFCC;
 
 HWND hwnd;
 HWND button;
+HWND textField;
 HDC hdc;
 string buffer;
 RECT txtWindow;
@@ -129,6 +130,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 			hdc = GetDC(hwnd);
 			ReleaseDC(hwnd, hdc);
 		break;
+
 	case WM_COMMAND:
 			// Check user menu selections
 			CheckMenu(wParam);
@@ -209,7 +211,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 void InstantiateWindow(HINSTANCE hInst)
 {
 	WNDCLASSEX Wcl;
-	char Name[] = "Dumb Terminal";
+	char Name[] = "Grapefruit Protocol Implementation";
 
 	Wcl.cbSize = sizeof(WNDCLASSEX);
 	Wcl.style = CS_HREDRAW | CS_VREDRAW;
@@ -232,12 +234,38 @@ void InstantiateWindow(HINSTANCE hInst)
 	hwnd = CreateWindow(Name, Name, WS_OVERLAPPEDWINDOW ,
 		10, 10, 700, 500, NULL, NULL, hInst, NULL);
 
-	button = CreateWindow( "button", "Label",
+
+	button = CreateWindow( 
+				"button", 
+				"Send Msssage",
                 WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-                100, 200, 
-                50, 20,
+				//x
+                520,
+				//y
+				370, 
+				//width
+                150, 
+				//height
+				50,
                 hwnd, (HMENU) IDM_SEND_BUTTON,
                 hInst, NULL );
+
+	textField = CreateWindowEx(WS_EX_CLIENTEDGE,
+								"Edit",
+								NULL,
+								WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+								//x
+								10,
+								//y
+								390, 
+								//width
+								500,
+								//height
+								25,
+								hwnd, NULL,
+								hInst, NULL);
+
+
 }
 
 /**********************************************************************************
@@ -263,7 +291,6 @@ void InstantiateWindow(HINSTANCE hInst)
 void CheckMenu(WPARAM wP)
 {
 	HMENU hMenu = GetMenu(hwnd);
-
 	switch (LOWORD(wP))
 	{
 	case IDM_COM1:
@@ -290,7 +317,7 @@ void CheckMenu(WPARAM wP)
 		break;
 
 	case IDM_HELP:
-		MessageBox(hwnd, "This program emulates a dumb terminal application.\n"
+		MessageBox(hwnd, "This program implements the Grapefruit Protocol.\n"
 			"\n Make sure your port matches the one on your computer."
 			"\n You can set the settings of your port in the Port Settings.", "Help", MB_OK | MB_ICONQUESTION);
 		break;
@@ -298,6 +325,7 @@ void CheckMenu(WPARAM wP)
 	
 	case IDM_SEND_BUTTON:
 		//handle button press
+		MessageBox(hwnd, "Pressed button", "Button", MB_OK);
 		break;
 
 	case IDM_EXIT:
