@@ -55,6 +55,7 @@ HWND button;
 HWND textField;
 HDC hdc;
 string buffer;
+string tempBuffer;
 RECT txtWindow;
 
 /*******************************************************************
@@ -262,7 +263,7 @@ void InstantiateWindow(HINSTANCE hInst)
 								500,
 								//height
 								25,
-								hwnd, NULL,
+								hwnd, (HMENU) IDM_TEXT,
 								hInst, NULL);
 
 
@@ -290,6 +291,7 @@ void InstantiateWindow(HINSTANCE hInst)
 
 void CheckMenu(WPARAM wP)
 {
+	int value;
 	HMENU hMenu = GetMenu(hwnd);
 	switch (LOWORD(wP))
 	{
@@ -326,6 +328,24 @@ void CheckMenu(WPARAM wP)
 	case IDM_SEND_BUTTON:
 		//handle button press
 		MessageBox(hwnd, "Pressed button", "Button", MB_OK);
+		value = GetWindowTextLength(GetDlgItem(hwnd, IDM_TEXT));
+
+		//Display chars if the length is greater than 0
+		if ( value > 0 )
+		{
+			int i;
+			char* buf;
+
+			buf = (char*)GlobalAlloc(GPTR, value + 1);
+			GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);
+			//append the buffer to the global buffer
+			tempBuffer.append(buf);
+
+			//Clear the textfield
+			SetDlgItemText(hwnd, IDM_TEXT, "");
+
+			OutputText(tempBuffer);
+		}
 		break;
 
 	case IDM_EXIT:
@@ -371,12 +391,12 @@ void GetCharsFromPort(char *c)
 **
 ** PROGRAMMER:	Filip Gutica
 **
-** INTERFACE:	void GetCharsFromPort(char *)
+** INTERFACE:	OutputText()
 **
 ** RETURNS:	void
 **
 ** NOTES:
-** This functions gets chars from the port and adds them to the buffer
+** This functions displays the main buffer to the screen
 ************************************************************************************/
 void OutputText()
 {
@@ -396,6 +416,44 @@ void OutputText()
 	// Makes the text wrap around the window.
 	ReleaseDC(hwnd, hdc);					 
 }
+
+/**********************************************************************************
+**	FUNCTION: OutputText()
+**
+** DATE: September 16th, 2014
+**
+** REVISIONS:	N/A
+**
+** DESIGNER:	Filip Gutica
+**
+** PROGRAMMER:	Filip Gutica
+**
+** INTERFACE:	void OutputText(char *buffer)
+**
+** RETURNS:	void
+**
+** NOTES:
+** This functions displays a buffer's contents to the screen
+************************************************************************************/
+void OutputText(string buffer)
+{
+	GetClientRect(hwnd, &txtWindow);
+	hdc = GetDC(hwnd);
+
+	//Change background to transparent
+	SetBkMode(hdc, TRANSPARENT);
+
+	DrawText(hdc, buffer.c_str(), 
+			strlen(buffer.c_str()), 
+			&txtWindow, 
+			// Set the formatting of the drawn text
+			DT_EDITCONTROL | DT_WORDBREAK );
+
+	// Makes the text wrap around the window.
+	ReleaseDC(hwnd, hdc);					 
+}
+
+
 
 /*********************************************************************
 ** Function: ConnectMode

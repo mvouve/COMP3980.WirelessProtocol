@@ -15,6 +15,7 @@
 
 //Physical layer header file
 #include "Physical.h" 
+#include "Windowsx.h"
 
 /* 
  Function prototypes used in Application.cpp and Physical.cpp
@@ -24,6 +25,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void CheckMenu(WPARAM);
 void InstantiateWindow(HINSTANCE);
 void OutputText();
+void OutputText( string );
 void GetCharsFromPort(char * c);
 void ChangeBackgroundColor(HWND, COLORREF);
 void ConnectMode(HMENU);
