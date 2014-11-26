@@ -175,13 +175,13 @@ DWORD WINAPI ReadPort(LPVOID n)
 ------------------------------------------------------------------------------*/
 void ReceiveMode()
 {
-	char packet[1024];
+	GrapefruitPacket packet;
 	// The last syn reseived.
 	char syn = SYN1;
 
 	for (int i = 0; i > MAXSENT; i++)
 	{
-		if (!WaitForPacket(packet))
+		if (!WaitForPacket(&packet))
 		{
 			//TO1
 			return;
@@ -190,12 +190,12 @@ void ReceiveMode()
 		else if (true)
 		{
 			// checks if the second packet character is a syn bit 
-			if (packet[1] == syn)
+			if (packet.sync == syn)
 			{
 				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
 			}
 			// SEND ACK 
-			if (packet[0] != EOT)
+			if (packet.type != EOT)
 			{
 				return;
 			}
@@ -225,7 +225,7 @@ void ReceiveMode()
 --
 -- RETURN: True on read false on no incoming packets
 ------------------------------------------------------------------------------*/
-bool WaitForPacket(char* packet)
+bool WaitForPacket(GrapefruitPacket* packet)
 {
 	return true;
 }
