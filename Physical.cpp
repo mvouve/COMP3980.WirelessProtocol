@@ -23,7 +23,7 @@
 PortInfo portInfo;
 HWND curHwnd;
 DCB dcb = { 0 };
-char *c = new char[DATA_SIZE];
+//char *c = new char[1];
 GrapefruitPacket packet;
 
 /*------------------------------------------------------------------------------
@@ -40,6 +40,7 @@ void Connect()
 	
 	portInfo.strReceive = new char[LINE_SIZE]; // Buffer for received characters
 	memset(portInfo.strReceive, 0, sizeof(portInfo.strReceive)); //Initialize the buffer to null
+	//memset(c, 0, sizeof(c));
 
 	if ((portInfo.hComm = CreateFile(portInfo.lpszCommName, GENERIC_READ | GENERIC_WRITE, 0,
 		NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
@@ -241,10 +242,10 @@ bool WaitForPacket(GrapefruitPacket* packet)
 /*-----------------------------------------------------------------------------*/
 char * BuildBuffer(char * strToSend)
 {
-	strcat(c, strToSend);
+	//strcat(c, strToSend);
 
-	OutputDebugString(c);
-	return c;
+	//OutputDebugString(c);
+	return strToSend;
 
 	// Write the character sent to this function to the port.
 
@@ -254,28 +255,54 @@ char * BuildBuffer(char * strToSend)
 	
 }
 
-GrapefruitPacket BuildPacket()
+GrapefruitPacket BuildPacket(char * c)
 {
+	if (packet.sync == SYN1)	packet.sync = SYN2;
+	else						packet.sync = SYN1;
+	
 	int count = 0;
-	while (count < DATA_SIZE)
+	for(count = 0; count < DATA_SIZE ; count++)
 	{
+		if(count >= sizeof(&c)/sizeof(char))	break;
+
 		strcat(packet.data, &c[count]);
-		count++;
 	}
 
-	if (count < DATA_SIZE)
+	if (sizeof(&c)/sizeof(char) < DATA_SIZE)
 	{
-		packet.control[0] = EOT;
-		while (count < DATA_SIZE)
+		packet.status = ETB;
+		
+	} else {
+		packet.status= EOT;
+		packet.data[count] = ETX;
+		count++;
+		for(; count < DATA_SIZE ; count++)
 		{
-			//Add padding characters 
-			/*if ()
-			{
-				packet.data[count] = ETX;
-				strcat(packet.data, '\0');
-			}*/
-			count++;
+			packet.data[count] = '\0';
 		}
+	}
+	unsigned char message[1020];
+	message[0]=packet.status;
+	message[1]=packet.sync;
+	for(int i = 0; i < DATA_SIZE; i++)
+	{
+		message[i+2] = packet.data[i];
+	}
+	int crcBits = crcFast(message,1020);
+	int *helping = &crcBits;
+
+	strcpy(packet.crc, (char*) helping);
+	//packet.crc[0] = helping[0]; packet.crc[1] = helping[1]; packet.crc[2] = helping[2]; packet.crc[3] = helping[3];
+
+	OutputDebugString((LPCSTR)packet.status);
+	OutputDebugString((LPCSTR)packet.sync);
+	for (int i = 0; i < DATA_SIZE; i++) 
+	{
+		OutputDebugString((LPCSTR)packet.data[i]);
+	}
+	for (int i = 0; i < CRC_SIZE; i ++)
+	{
+		OutputDebugString((LPCSTR)packet.crc[i]);
 	}
 
 	return packet;

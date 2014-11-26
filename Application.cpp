@@ -155,7 +155,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 			if (isConnected())
 			{
 				// Output received characters
-				OutputText();
+				//OutputText();
 			}
 			EndPaint(hwnd, &paintstruct);
 		break;
@@ -338,11 +338,16 @@ void CheckMenu(WPARAM wP)
 
 			buf = (char*)GlobalAlloc(GPTR, value + 1);
 			GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);
+			
+			BuildBuffer(buf);
 			//append the buffer to the global buffer
 			tempBuffer.append(buf);
+			
 
 			//Clear the textfield
 			SetDlgItemText(hwnd, IDM_TEXT, "");
+
+			
 
 			OutputText(tempBuffer);
 		}

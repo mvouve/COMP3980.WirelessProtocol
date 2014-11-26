@@ -30,6 +30,7 @@
 #include <stdio.h>		// standard c io
 #include <iostream>		// io stream
 #include "Menu.h"		// Menu resources
+#include "crc.h"
 
 using std::string;
 
@@ -47,7 +48,8 @@ struct PortInfo {
 };
 
 struct GrapefruitPacket {
-	char control[CONTROL_SIZE];
+	char status;
+	char sync;
 	char data[DATA_SIZE];
 	char crc[CRC_SIZE];
 };
@@ -57,7 +59,7 @@ void Connect();
 void SetPortSettings(char *, HWND);
 DWORD WINAPI ReadPort(LPVOID);
 char * BuildBuffer(char *);
-GrapefruitPacket BuildPacket();
+GrapefruitPacket BuildPacket(char *);
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();
