@@ -238,8 +238,7 @@ void InstantiateWindow(HINSTANCE hInst)
 
 	button = CreateWindow( 
 				"button", 
-				"Send Me
-				ssage",
+				"Send Message",
                 WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
 				//x
                 520,
