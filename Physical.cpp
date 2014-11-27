@@ -187,7 +187,7 @@ void ReceiveMode()
 			//TO1
 			return;
 		}
-		// validate packet
+		// validate packet, assuming valid for now.
 		else if (true)
 		{
 			// checks if the second packet character is a syn bit 
@@ -196,7 +196,7 @@ void ReceiveMode()
 				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
 			}
 			// SEND ACK 
-			if (packet.type != EOT)
+			if (packet.status != EOT)
 			{
 				return;
 			}
