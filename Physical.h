@@ -65,6 +65,7 @@ void setConnected(BOOL connect);
 BOOL isConnected();
 void closePort();
 void PrintCommState(DCB);
+void WriteMode();
 void ReceiveMode();
 bool WaitForPacket(GrapefruitPacket * packet);
 

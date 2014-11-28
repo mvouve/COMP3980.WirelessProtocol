@@ -1,5 +1,6 @@
 /* Protocol defines */
-#define MAXSENT 3	// Number of retry attempts on read thread.
+#define MAXMISS 3	// Number of retry attempts on read thread.
+#define MAXSENT 5   // Number of packets successfully sent
 
 /* define protocol control chars */
 #define SYN1 18

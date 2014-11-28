@@ -209,6 +209,63 @@ void ReceiveMode()
 }
 
 /*------------------------------------------------------------------------------
+-- FUNCTION: WriteMode()
+--
+-- PURPOSE:  This functions writes the the packet with crc to the port
+--
+-- DESIGNER: Rhea Lauzon
+--
+--
+-- PROGRAMMER: Rhea Lauzon A00848381
+--
+--
+------------------------------------------------------------------------------*/
+void WriteMode()
+{
+	//Wait for ACK
+
+	int miss = 0;
+
+	for ( int i = 0; i < MAXSENT; i++)
+	{
+		while ( miss < MAXMISS )
+		{
+			//Send packet
+
+			//Wait for ACK
+							
+			//ACK Received: update buffer and packetize
+			/* if (  )
+			{
+				//Check for EOT
+				if ( packetData[0].equals( EOT ) == 0 )
+				{
+					return;
+				}
+				
+				miss = 0;
+				break;
+			}
+			*/
+
+			//NAK Received: resend data and increment miss
+			/*else if ( WaitForSingleObject returned is NAK )
+			{
+				miss++;
+				break;
+			}*/
+
+			//No ACK or NAK; resend and increment
+			//else
+			//{
+				miss++;
+				break;
+			//}
+		}
+	}
+}
+
+/*------------------------------------------------------------------------------
 -- FUNCTION: bool WaitForPacket(char* packet)
 --
 -- PARAMS:	char* packet: A buffer to read in the recieved packet onto.
