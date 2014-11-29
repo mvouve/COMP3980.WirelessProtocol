@@ -14,8 +14,10 @@
 #define application_h
 
 //Physical layer header file
+#include <sstream>
 #include "Physical.h" 
 #include "Windowsx.h"
+#include "statistics.h"
 
 /* 
  Function prototypes used in Application.cpp and Physical.cpp
@@ -32,5 +34,6 @@ void ConnectMode(HMENU);
 void CommandMode(HMENU);
 void disableMenuItems(HMENU);
 void enableMenuItems(HMENU);
+void PrintStats();
 
 #endif

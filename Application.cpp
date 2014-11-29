@@ -1,7 +1,8 @@
 /*******************************************************************************
-** Source File : Applicationn.cpp -- An application that simulates a dumb terminal.
+** Source File : Applicationn.cpp -- A terminal application that simulates the
+**									Grapefruit Protocol.
 **
-** Program : dumbTerminal
+** Program : Grapefruit Protocol Implementation
 **
 ** Functions :
 **			LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -26,16 +27,6 @@
 **				Rhea Lauzon A00881688
 **
 ** Notes :
-** The program begins in command mode where the port's settings and
-** port number can be changed before a connection begins.Once connection
-** occurs all menu items except "Disconnect" become unavailable as the program
-** enters a read and write loop until the 'ESC' key is pressed or the
-** disconnect button is pressed.
-**
-** The program will monitor a port for characters being sent by another
-** device, however due to a non - overlapped structure the program will
-** hang unless characters are being sent and receive at the same time.
-**
 **
 ***********************************************************************/
 #define STRICT
@@ -57,6 +48,7 @@ HDC hdc;
 string buffer;
 string tempBuffer;
 RECT txtWindow;
+Statistics *stats;
 
 /*******************************************************************
 ** Function: WinMain
@@ -186,6 +178,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 	default:
 		return DefWindowProc(hwnd, Message, wParam, lParam);
 	}
+		PrintStats();
 	return 0;
 }
 
@@ -266,7 +259,7 @@ void InstantiateWindow(HINSTANCE hInst)
 								hwnd, (HMENU) IDM_TEXT,
 								hInst, NULL);
 
-
+	stats = Statistics::GetInstance();
 }
 
 /**********************************************************************************
@@ -356,8 +349,6 @@ void CheckMenu(WPARAM wP)
 	case IDM_EXIT:
 		PostQuitMessage(0);
 		break;
-
-
 	}
 }
 
@@ -521,7 +512,6 @@ void CommandMode(HMENU menuHandle)
 	enableMenuItems(menuHandle);
 	DrawMenuBar(hwnd);
 	setConnected(false);
-
 	return;
 
 }
@@ -606,4 +596,69 @@ void enableMenuItems(HMENU menuHandle)
 	EnableMenuItem(menuHandle, IDM_COM1, MF_BYCOMMAND | MF_ENABLED);
 	EnableMenuItem(menuHandle, IDM_COM2, MF_BYCOMMAND | MF_ENABLED);
 	EnableMenuItem(menuHandle, IDM_COM3, MF_BYCOMMAND | MF_ENABLED);
+}
+
+
+/*******************************************************************
+** Function: PrintStats
+**
+** Date: November 29th, 2014
+**
+** Revisions: N/A
+**
+** Designer: Rhea Lauzon
+**
+** Programmer: Rhea Lauzon
+**
+** Interface: void PrintStats()
+**
+** Returns: void
+**
+** Notes:
+** This function prints the stats recorded from the protocol.
+*******************************************************************/
+void PrintStats()
+{
+	hdc = GetDC(hwnd);
+	std::stringstream s;
+
+	SetBkMode(hdc, TRANSPARENT);
+
+	//Print ACKS
+	s << "ACKS: " <<  stats->GetACKS();
+	TextOut(hdc, 500, 20, s.str().c_str(), s.str().length());
+
+	//Print NAKS
+	s.str("");
+	s << "NAKS: " <<  stats->GetNAKS();
+	TextOut(hdc, 500, 40, s.str().c_str(), s.str().length());
+
+	//Print NAKS
+	s.str("");
+	s << "NAKS: " <<  stats->GetNAKS();
+	TextOut(hdc, 500, 40, s.str().c_str(), s.str().length());
+
+	//Print PacketsSent
+	s.str("");
+	s << "Sent: " <<  stats->GetPacketsSent();
+	TextOut(hdc, 500, 60, s.str().c_str(), s.str().length());
+
+	//Print PacketsLost
+	s.str("");
+	s << "Lost: " <<  stats->GetPacketsLost();
+	TextOut(hdc, 500, 80, s.str().c_str(), s.str().length());
+
+
+	//Print Received
+	s.str("");
+	s << "Received: " <<  stats->GetReceived();
+	TextOut(hdc, 500, 100, s.str().c_str(), s.str().length());
+
+	//Print Received Corrupted
+	s.str("");
+	s << "Corrutped Packets: " <<  stats->GetReceivedC();
+	TextOut(hdc, 500, 120, s.str().c_str(), s.str().length());
+
+
+	ReleaseDC(hwnd, hdc);
 }

@@ -36,6 +36,9 @@
     <ClInclude Include="crc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="statistics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Menu.rc">
@@ -53,6 +56,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="crc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="usingStats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

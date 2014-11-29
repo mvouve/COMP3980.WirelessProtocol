@@ -69,6 +69,7 @@
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Session.h" />
+    <ClInclude Include="statistics.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Menu.rc" />
@@ -78,6 +79,7 @@
     <ClCompile Include="crc.cpp" />
     <ClCompile Include="Physical.cpp" />
     <ClCompile Include="Session.cpp" />
+    <ClCompile Include="usingStats.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
