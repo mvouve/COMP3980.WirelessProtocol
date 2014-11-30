@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------------------------------
 --	SOURCE FILE:	Physical.cpp -		Physical layer of the Dumb terminal program. 
 --	 									
---	PROGRAM:	DumbTerminal
+--	PROGRAM:	GrapefruitProtocol
 --
 --	DATE: 		September 28, 2014
 --
@@ -145,11 +145,13 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 	{
 		WritePort("" + ACK );
 		//ReadMode
+		ReceiveMode();
 	}
 	else if (c[0] != '/0')
 	{
 		WritePort( "" + ENQ );
 		//Send Mode
+		WriteMode();
 	}
 	ExitThread(0);
 	return 0L;
@@ -224,7 +226,7 @@ BOOL WritePort( const void * message )
 void ReceiveMode()
 {
 	GrapefruitPacket packet;
-	// The last syn reseived.
+	// The last syn received.
 	char syn = SYN1;
 
 	for (int i = 0; i > MAXSENT; i++)
@@ -256,9 +258,7 @@ void ReceiveMode()
 			//Send NAK
 			WritePort("" + NAK);
 		}
-	}
-
-	
+	}	
 }
 
 /*------------------------------------------------------------------------------
@@ -275,7 +275,15 @@ void ReceiveMode()
 ------------------------------------------------------------------------------*/
 void WriteMode()
 {
+	char *temp;
+
 	//Wait for ACK
+	if (!WaitFor(temp))
+	{
+		//Timeout
+		Sleep(100);
+		return;
+	}
 
 	int miss = 0;
 
@@ -284,36 +292,43 @@ void WriteMode()
 		while ( miss < MAXMISS )
 		{
 			//Send packet
+			WritePort(&GlobalPacket);
 
 			//Wait for ACK
-							
-			//ACK Received: update buffer and packetize
-			/* if (  )
+			if (!WaitFor(temp))
 			{
-				//Check for EOT
-				if ( packetData[0].equals( EOT ) == 0 )
-				{
-					return;
-				}
-				
-				miss = 0;
-				break;
+				//Timeout
+				Sleep(100);
+				return;
 			}
-			*/
+
+			if (temp[0] == ACK)
+			{										
+				//ACK Received: update buffer and packetize
+				//Check for EOT
+				for (int i = 0; i < sizeof(GlobalPacket.data)/sizeof(char); i++)
+				{
+					if ( GlobalPacket.data[i] == EOT )
+					{
+						return;
+					}
+				}							
+				miss = 0;
+			}
 
 			//NAK Received: resend data and increment miss
-			/*else if ( WaitForSingleObject returned is NAK )
+			else if ( temp[0] == NAK )
 			{
 				miss++;
 				break;
-			}*/
+			}
 
 			//No ACK or NAK; resend and increment
-			//else
-			//{
+			else
+			{
 				miss++;
 				break;
-			//}
+			}
 		}
 	}
 }
@@ -339,6 +354,31 @@ void WriteMode()
 bool WaitForPacket(GrapefruitPacket* packet)
 {
 	packet = (GrapefruitPacket *) ReadPort();
+	return true;
+}
+
+/*------------------------------------------------------------------------------
+-- FUNCTION: bool WaitFor(char* object)
+--
+-- PARAMS:	char* packet: A buffer to read in the recieved packet onto.
+--
+-- PURPOSE:  This function holds the thread for a predefined wait time, reading
+--			 for an incoming packet. when a packet is received it writes the
+--			 data to the packet char*.
+--
+--
+--
+-- DESIGNER: Marc Vouve A00848381
+--
+--
+-- PROGRAMMER: Marc Vouve A00848381
+--
+-- RETURN: True on read false on no incoming packets
+------------------------------------------------------------------------------*/
+bool WaitFor(char* object)
+{
+	object = ReadPort();
+
 	return true;
 }
 
@@ -415,10 +455,9 @@ GrapefruitPacket BuildPacket()
 	// Write the character sent to this function to the port.
 
 	
-	WriteFile(portInfo.hComm,  &GlobalPacket,
-		sizeof(GlobalPacket), &portInfo.dwWritten, &portInfo.overlapped);
-
-	
+	//WriteFile(portInfo.hComm,  &GlobalPacket,
+		//sizeof(GlobalPacket), &portInfo.dwWritten, &portInfo.overlapped);
+		
 
 	return GlobalPacket;
 }

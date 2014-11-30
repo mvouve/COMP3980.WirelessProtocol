@@ -22,6 +22,7 @@
 #define CHARS_TO_READ 1
 #define CONTROL_SIZE 2
 #define DATA_SIZE 1018
+#define PACKET_SIZE 1024
 #define CRC_SIZE 4
 
 #include <Windows.h>	// Windows API
@@ -72,5 +73,6 @@ void PrintCommState(DCB);
 void WriteMode();
 void ReceiveMode();
 bool WaitForPacket(GrapefruitPacket * packet);
+bool WaitFor(char* object);
 
 #endif
