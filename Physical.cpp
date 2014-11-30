@@ -440,9 +440,8 @@ GrapefruitPacket BuildPacket()
 
 	
 	int crcBits = crcFast((unsigned char*)GlobalPacket.data, DATA_SIZE);
-	int *helping = &crcBits;
-
-	strcpy(GlobalPacket.crc, (char*) helping);
+	unsigned char *helping = &crcBits;
+	GlobalPacket.crc[0] = helping[3]; GlobalPacket.crc[1] = helping[2];  GlobalPacket.crc[2] = helping[1]; GlobalPacket.crc[3] = helping[0];  
 
 	OutputDebugStringA( "" + GlobalPacket.status);
 	OutputDebugStringA("" + GlobalPacket.sync);
