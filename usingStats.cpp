@@ -144,6 +144,7 @@ Statistics * Statistics::GetInstance()
 	if ( instance == nullptr )
 	{
 		instance = new Statistics();
+		OutputDebugString("Debugstatement");
 	}
 
 	return instance;

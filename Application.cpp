@@ -74,7 +74,9 @@ Statistics *stats;
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam, int nCmdShow)
 {
 	MSG Msg;
-	
+
+	stats = Statistics::GetInstance();
+
 	InstantiateWindow(hInst);
 
 	ShowWindow(hwnd, nCmdShow);
@@ -136,7 +138,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 				sprintf(strSend, "%c", (char)wParam);
 				// Send chars from keyboard to WritePort()
 				//WritePort(strSend);
-				BuildBuffer(strSend);
+				//BuildBuffer(strSend);
 			//}
 			ReleaseDC(hwnd, hdc);							
 		break;
@@ -147,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 			if (isConnected())
 			{
 				// Output received characters
-				//OutputText();
+				OutputText();
 			}
 			EndPaint(hwnd, &paintstruct);
 		break;
@@ -259,7 +261,7 @@ void InstantiateWindow(HINSTANCE hInst)
 								hwnd, (HMENU) IDM_TEXT,
 								hInst, NULL);
 
-	stats = Statistics::GetInstance();
+
 }
 
 /**********************************************************************************
@@ -320,7 +322,7 @@ void CheckMenu(WPARAM wP)
 	
 	case IDM_SEND_BUTTON:
 		//handle button press
-		MessageBox(hwnd, "Pressed button", "Button", MB_OK);
+		//MessageBox(hwnd, "Pressed button", "Button", MB_OK);
 		value = GetWindowTextLength(GetDlgItem(hwnd, IDM_TEXT));
 
 		//Display chars if the length is greater than 0
@@ -333,6 +335,7 @@ void CheckMenu(WPARAM wP)
 			GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);
 			
 			BuildBuffer(buf);
+			BuildPacket();
 			//append the buffer to the global buffer
 			tempBuffer.append(buf);
 			
@@ -342,7 +345,7 @@ void CheckMenu(WPARAM wP)
 
 			
 
-			OutputText(tempBuffer);
+			//OutputText(tempBuffer);
 		}
 		break;
 
@@ -372,6 +375,7 @@ void CheckMenu(WPARAM wP)
 ************************************************************************************/
 void GetCharsFromPort(char *c)
 {
+	//strcat((char *)buffer.c_str(), c);
 	buffer += c;
 	InvalidateRect(hwnd, NULL, FALSE);
 }

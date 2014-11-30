@@ -59,7 +59,7 @@ void Connect();
 void SetPortSettings(char *, HWND);
 DWORD WINAPI ReadPort(LPVOID);
 char * BuildBuffer(char *);
-GrapefruitPacket BuildPacket(char *);
+GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();
