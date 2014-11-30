@@ -9,4 +9,7 @@
 #define ETB  23
 #define EOT  04
 #define ETB  23
-#define ETX  05
+#define ETX  03
+#define ENQ  05
+#define ACK  06
+#define NAK  21

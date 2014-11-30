@@ -74,7 +74,7 @@ Statistics *stats;
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam, int nCmdShow)
 {
 	MSG Msg;
-
+	
 	stats = Statistics::GetInstance();
 
 	InstantiateWindow(hInst);
@@ -88,7 +88,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 		TranslateMessage(&Msg);
 		DispatchMessage(&Msg);
 	}
-
+	
 	return Msg.wParam;
 }
 

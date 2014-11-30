@@ -24,7 +24,7 @@ PortInfo portInfo;
 HWND curHwnd;
 DCB dcb = { 0 };
 char c[1018];
-GrapefruitPacket packet;
+GrapefruitPacket GlobalPacket;
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -58,7 +58,7 @@ void Connect()
 		portInfo.connected = TRUE;
 	}
 	// Starting the read thread
-	hThrd = CreateThread(NULL, 0, ReadPort, (LPVOID)2, 0, &threadID);
+	hThrd = CreateThread(NULL, 0, ProtocolThread, (LPVOID)2, 0, &threadID);
 
 	if (!hThrd)
 	{
@@ -123,7 +123,7 @@ void PrintCommState(DCB dcb)
 }
 
 /*------------------------------------------------------------------------------
---	FUNCTION: ReadPort(LPVOID)
+--	FUNCTION: ProtocolThread(LPVOID)
 --
 --	PURPOSE: Thread function continuously reads from the COM port
 --
@@ -137,7 +137,26 @@ void PrintCommState(DCB dcb)
 --			Modified for this assignment. 
 --
 /*-----------------------------------------------------------------------------*/
-DWORD WINAPI ReadPort(LPVOID n)
+DWORD WINAPI ProtocolThread(LPVOID n)
+{
+	char * temp;
+	temp = ReadPort();
+	if ( temp[0]  == ENQ )
+	{
+		WritePort("" + ACK );
+		//ReadMode
+	}
+	else if (c[0] != '/0')
+	{
+		WritePort( "" + ENQ );
+		//Send Mode
+	}
+	ExitThread(0);
+	return 0L;
+}
+
+
+char * ReadPort(void)
 {
 	DWORD dwEvtMask;
 	SetCommMask(portInfo.hComm, EV_RXCHAR);
@@ -149,19 +168,44 @@ DWORD WINAPI ReadPort(LPVOID n)
 		if (dwEvtMask == EV_RXCHAR)
 		{
 			// Read in characters if character is found by waitcommevent
-			if (ReadFile(portInfo.hComm, portInfo.strReceive,CHARS_TO_READ, &portInfo.dwRead,&portInfo.overlapped))
-				GetCharsFromPort(portInfo.strReceive);
+			if (ReadFile(portInfo.hComm, portInfo.strReceive,sizeof(GlobalPacket), &portInfo.dwRead,&portInfo.overlapped)) 
+			{
+				//GetCharsFromPort(portInfo.strReceive);
+			}
 			else if (GetLastError() == ERROR_IO_PENDING)
 			{
 				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
-				GetCharsFromPort(portInfo.strReceive);
+				//GetCharsFromPort(portInfo.strReceive);
 			}
 		}
 		dwEvtMask = NULL;
 	}
-	ExitThread(0);
-	return 0L;
+
+	return portInfo.strReceive;
 }
+
+/*------------------------------------------------------------------------------
+-- FUNCTION: WritePort( void * message )
+--
+-- PURPOSE:  This is a helper function for writing Packets/Control Characters
+--           to the port.
+--
+--
+--
+-- DESIGNER: Marc Vouve A00848381
+--
+--
+-- PROGRAMMER: Marc Vouve A00848381
+--
+--
+------------------------------------------------------------------------------*/
+BOOL WritePort( const void * message )
+{
+	return WriteFile(portInfo.hComm,  message,
+		sizeof(message), &portInfo.dwWritten, &portInfo.overlapped);
+}
+
+
 
 /*------------------------------------------------------------------------------
 -- FUNCTION: ReceieveMode()
@@ -187,7 +231,8 @@ void ReceiveMode()
 	{
 		if (!WaitForPacket(&packet))
 		{
-			//TO1
+			//TO1 this will be replaced
+			Sleep(100);
 			return;
 		}
 		// validate packet, assuming valid for now.
@@ -197,8 +242,10 @@ void ReceiveMode()
 			if (packet.sync == syn)
 			{
 				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
+				GetCharsFromPort(packet.data);
 			}
 			// SEND ACK 
+			WritePort("" + ACK);
 			if (packet.status != EOT)
 			{
 				return;
@@ -207,8 +254,11 @@ void ReceiveMode()
 		else
 		{
 			//Send NAK
+			WritePort("" + NAK);
 		}
 	}
+
+	
 }
 
 /*------------------------------------------------------------------------------
@@ -288,6 +338,7 @@ void WriteMode()
 ------------------------------------------------------------------------------*/
 bool WaitForPacket(GrapefruitPacket* packet)
 {
+	packet = (GrapefruitPacket *) ReadPort();
 	return true;
 }
 
@@ -302,12 +353,11 @@ bool WaitForPacket(GrapefruitPacket* packet)
 /*-----------------------------------------------------------------------------*/
 char * BuildBuffer(char * strToSend)
 {
-
 	memset(&c[0], 0, sizeof(c));
-	packet.status = '\0';
-	packet.sync = '\0';
+	GlobalPacket.status = '\0';
+	GlobalPacket.sync = '\0';
 
-	memset(&packet.data[0], 0, sizeof(packet.data));
+	memset(GlobalPacket.data, 0, sizeof(GlobalPacket.data));
 
 	strcat(c, strToSend);
 
@@ -320,57 +370,57 @@ char * BuildBuffer(char * strToSend)
 
 GrapefruitPacket BuildPacket()
 {
-	if (packet.sync == SYN1)	packet.sync = SYN2;
-	else						packet.sync = SYN1;
+	
+	if (GlobalPacket.sync == SYN1)	GlobalPacket.sync = SYN2;
+	else							GlobalPacket.sync = SYN1;
 	
 	int count = 0;
 	for(count = 0; count < DATA_SIZE && count < sizeof(c)/sizeof(char) ; count++)
 	{
 		
-		packet.data[count] = c[count];
+		GlobalPacket.data[count] = c[count];
 		
 	}
 
 	if (sizeof(c)/sizeof(char) < DATA_SIZE)
 	{
-		packet.status = ETB;
-		packet.data[count] = ETX;
+		GlobalPacket.status = ETB;
+		GlobalPacket.data[count] = ETX;
 		count++;
 		for(int i = count; i < DATA_SIZE ; i++)
 		{
-			packet.data[i] = '\0';
+			GlobalPacket.data[i] = '\0';
 		}
 		
 	} 
 	else 
 	{
-		packet.status= EOT;
+		GlobalPacket.status= EOT;
 	}
 
 	
-	int crcBits = crcFast((unsigned char*)packet.data, DATA_SIZE);
+	int crcBits = crcFast((unsigned char*)GlobalPacket.data, DATA_SIZE);
 	int *helping = &crcBits;
 
-	strcpy(packet.crc, (char*) helping);
+	strcpy(GlobalPacket.crc, (char*) helping);
 
-	OutputDebugStringA( "" + packet.status);
-	OutputDebugStringA("" + packet.sync);
+	OutputDebugStringA( "" + GlobalPacket.status);
+	OutputDebugStringA("" + GlobalPacket.sync);
 	
-	OutputDebugString(packet.data);
+	OutputDebugString(GlobalPacket.data);
 
 	
-	OutputDebugStringA(packet.crc);
+	OutputDebugStringA(GlobalPacket.crc);
 
 	// Write the character sent to this function to the port.
 
 	
-	WriteFile(portInfo.hComm,  &packet,
-		GetCommConfig(portInfo.hComm, &portInfo.cc, &portInfo.cc.dwSize),
-		NULL, &portInfo.overlapped);
+	WriteFile(portInfo.hComm,  &GlobalPacket,
+		sizeof(GlobalPacket), &portInfo.dwWritten, &portInfo.overlapped);
 
 	
 
-	return packet;
+	return GlobalPacket;
 }
 
 /*------------------------------------------------------------------------------

@@ -54,10 +54,14 @@ struct GrapefruitPacket {
 	char crc[CRC_SIZE];
 };
 
+
+
 /* Function prototypes used in Physical.cpp */
 void Connect();
 void SetPortSettings(char *, HWND);
-DWORD WINAPI ReadPort(LPVOID);
+DWORD WINAPI ProtocolThread(LPVOID);
+char * ReadPort(void);
+BOOL   WritePort(const void *);
 char * BuildBuffer(char *);
 GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
