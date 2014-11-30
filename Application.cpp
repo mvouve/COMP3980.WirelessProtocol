@@ -325,27 +325,30 @@ void CheckMenu(WPARAM wP)
 		//MessageBox(hwnd, "Pressed button", "Button", MB_OK);
 		value = GetWindowTextLength(GetDlgItem(hwnd, IDM_TEXT));
 
-		//Display chars if the length is greater than 0
-		if ( value > 0 )
+		if (isConnected())
 		{
-			int i;
-			char* buf;
+			//Display chars if the length is greater than 0
+			if ( value > 0 )
+			{
+				int i;
+				char* buf;
 
-			buf = (char*)GlobalAlloc(GPTR, value + 1);
-			GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);
+				buf = (char*)GlobalAlloc(GPTR, value + 1);
+				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
+
+				//Send ENQ to other side
+				char cChar = ENQ;
+				WriteControlChar(&cChar);
+				setTransmitting(true);
+				BuildBuffer(buf);
+				BuildPacket();
+				//append the buffer to the global buffer
+				tempBuffer.append(buf);
 			
-			BuildBuffer(buf);
-			BuildPacket();
-			//append the buffer to the global buffer
-			tempBuffer.append(buf);
-			
 
-			//Clear the textfield
-			SetDlgItemText(hwnd, IDM_TEXT, "");
-
-			
-
-			//OutputText(tempBuffer);
+				//Clear the textfield
+				SetDlgItemText(hwnd, IDM_TEXT, "");
+			}
 		}
 		break;
 

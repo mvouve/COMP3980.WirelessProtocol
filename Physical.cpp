@@ -68,7 +68,8 @@ void Connect()
 	}
 	else
 		// Continue transmitting
-		portInfo.transmitting = TRUE;
+		portInfo.transmitting = FALSE;
+
 }
 
 /*------------------------------------------------------------------------------
@@ -139,20 +140,42 @@ void PrintCommState(DCB dcb)
 /*-----------------------------------------------------------------------------*/
 DWORD WINAPI ProtocolThread(LPVOID n)
 {
-	char * temp;
-	temp = ReadPort();
-	if ( temp[0]  == ENQ )
+	
+
+	HANDLE hThrd;
+	DWORD threadID;
+	hThrd = CreateThread(NULL, 0, ReadThread, (LPVOID)2, 0, &threadID);
+	
+	while (true)
 	{
-		WritePort("" + ACK );
-		//ReadMode
-		ReceiveMode();
+		if (isTransmit() )
+		{
+			//Send Mode
+			WriteMode();
+
+		}
+		
 	}
-	else if (c[0] != '/0')
+	ExitThread(0);
+	return 0L;
+}
+
+DWORD WINAPI ReadThread(LPVOID n)
+{
+	char* control;
+
+	while (true)
 	{
-		WritePort( "" + ENQ );
-		//Send Mode
-		WriteMode();
+		control = ReadControlChar();
+
+		if (control[0] == ENQ)
+		{			
+			MessageBox(NULL, "woowwawiwawaa", "Got an ENQ", MB_OK);
+			//ReadMode
+			ReceiveMode();
+		}
 	}
+
 	ExitThread(0);
 	return 0L;
 }
@@ -162,28 +185,58 @@ char * ReadPort(void)
 {
 	DWORD dwEvtMask;
 	SetCommMask(portInfo.hComm, EV_RXCHAR);
-	while (portInfo.transmitting)
-	{
+
+		// Wait for a comm event
+		WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped);
+		
+		if (dwEvtMask == EV_RXCHAR)
+		{
+			MessageBox(NULL, "Getting packets and stuff", "", MB_OK);
+			
+			// Read in characters if character is found by waitcommevent
+			if (ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead,&portInfo.overlapped)) 
+			{
+				
+				GetCharsFromPort(portInfo.strReceive);
+			}
+			else if (GetLastError() == ERROR_IO_PENDING)
+			{
+				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
+				GetCharsFromPort(portInfo.strReceive);
+			}
+		}
+
+		dwEvtMask = NULL;
+
+	return portInfo.strReceive;
+}
+
+char * ReadControlChar(void)
+{
+	DWORD dwEvtMask;
+	SetCommMask(portInfo.hComm, EV_RXCHAR);
+	char  ccontrol[1];
+
+
 		// Wait for a comm event
 		WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped);
 		
 		if (dwEvtMask == EV_RXCHAR)
 		{
 			// Read in characters if character is found by waitcommevent
-			if (ReadFile(portInfo.hComm, portInfo.strReceive,sizeof(GlobalPacket), &portInfo.dwRead,&portInfo.overlapped)) 
+			if (ReadFile(portInfo.hComm,  ccontrol, sizeof(char), &portInfo.dwRead,&portInfo.overlapped)) 
 			{
-				//GetCharsFromPort(portInfo.strReceive);
+				//GetCharsFromPort(ccontrol);
 			}
 			else if (GetLastError() == ERROR_IO_PENDING)
 			{
 				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
-				//GetCharsFromPort(portInfo.strReceive);
+				//GetCharsFromPort(ccontrol);
 			}
 		}
 		dwEvtMask = NULL;
-	}
 
-	return portInfo.strReceive;
+	return ccontrol;
 }
 
 /*------------------------------------------------------------------------------
@@ -203,10 +256,21 @@ char * ReadPort(void)
 ------------------------------------------------------------------------------*/
 BOOL WritePort( const void * message )
 {
+	char s[256] = "";
 	return WriteFile(portInfo.hComm,  message,
 		sizeof(message), &portInfo.dwWritten, &portInfo.overlapped);
 }
 
+
+BOOL WriteControlChar( char * control )
+{
+	if (control[0] == ENQ)
+	{
+		MessageBox(NULL, "Sending ENQ", "ENQ", MB_OK);
+	}
+	return WriteFile(portInfo.hComm, control,
+		sizeof(control), &portInfo.dwWritten, &portInfo.overlapped);
+}
 
 
 /*------------------------------------------------------------------------------
@@ -237,17 +301,22 @@ void ReceiveMode()
 			Sleep(100);
 			return;
 		}
+
 		// validate packet, assuming valid for now.
 		else if (true)
 		{
+			
+				MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
 			// checks if the second packet character is a syn bit 
 			if (packet.sync == syn)
 			{
+				MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
 				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
 				GetCharsFromPort(packet.data);
 			}
 			// SEND ACK 
-			WritePort("" + ACK);
+			char c = ACK;
+			WriteControlChar(&c);
 			if (packet.status != EOT)
 			{
 				return;
@@ -256,7 +325,8 @@ void ReceiveMode()
 		else
 		{
 			//Send NAK
-			WritePort("" + NAK);
+			char c = NAK;
+			WriteControlChar(&c);
 		}
 	}	
 }
@@ -275,7 +345,8 @@ void ReceiveMode()
 ------------------------------------------------------------------------------*/
 void WriteMode()
 {
-	char *temp;
+	char temp[2];
+	char packet[PACKET_SIZE];
 
 	//Wait for ACK
 	if (!WaitFor(temp))
@@ -292,7 +363,21 @@ void WriteMode()
 		while ( miss < MAXMISS )
 		{
 			//Send packet
-			WritePort(&GlobalPacket);
+			MessageBox(NULL, "sending packet", "packet status", MB_OK);
+
+			packet[0] = GlobalPacket.status;
+			packet[1] = GlobalPacket.sync;
+
+			for (int i = 0 ; i < DATA_SIZE; i++)
+			{
+				packet[2 + i] = GlobalPacket.data[i];
+			}
+			for (int i = 0; i < CRC_SIZE; i++)
+			{
+				packet[DATA_SIZE + i] = GlobalPacket.crc[i];
+			}
+
+			WritePort(&packet);
 
 			//Wait for ACK
 			if (!WaitFor(temp))
@@ -331,6 +416,7 @@ void WriteMode()
 			}
 		}
 	}
+	setTransmitting(false);
 }
 
 /*------------------------------------------------------------------------------
@@ -354,6 +440,7 @@ void WriteMode()
 bool WaitForPacket(GrapefruitPacket* packet)
 {
 	packet = (GrapefruitPacket *) ReadPort();
+	MessageBox(NULL, "got packet", "asdf", MB_OK);
 	return true;
 }
 
@@ -488,6 +575,34 @@ void setConnected(BOOL connect)
 BOOL isConnected()
 {
 	return portInfo.connected;
+}
+
+/*------------------------------------------------------------------------------
+--	FUNCTION: SetConnected(BOOL connect)
+--
+--	PURPOSE: Sets the connection status true or false.
+--
+--	PARAMETERS:
+--		connect		- Boolean to tell if were connected to the COM port or not.
+--
+/*-----------------------------------------------------------------------------*/
+void setTransmitting(BOOL transmit)
+{
+	portInfo.transmitting = transmit;
+}
+
+/*------------------------------------------------------------------------------
+--	FUNCTION: isConnected()
+--
+--	PURPOSE: Returns the connection status true or false.
+--
+--	RETURN:
+--		Always True if currently connected, false if not connected
+--
+/*-----------------------------------------------------------------------------*/
+BOOL isTransmit()
+{
+	return portInfo.transmitting;
 }
 
 /*------------------------------------------------------------------------------

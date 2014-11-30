@@ -16,6 +16,7 @@
 //Physical layer header file
 #include <sstream>
 #include "Physical.h" 
+#include "Protocol.h"
 #include "Windowsx.h"
 #include "statistics.h"
 

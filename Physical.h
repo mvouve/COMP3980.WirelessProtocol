@@ -35,12 +35,15 @@
 
 using std::string;
 
+
+
 /* Structure containing every veriable needed by the COM port */
 struct PortInfo {
 	HANDLE hComm, hRead, hWrite;
 	LPCSTR lpszCommName;
 	BOOLEAN connected;
 	BOOLEAN transmitting;
+	BOOLEAN receiving;
 	DWORD dwWritten, dwRead;
 	COMMCONFIG cc;
 	DCB dcb;
@@ -55,12 +58,11 @@ struct GrapefruitPacket {
 	char crc[CRC_SIZE];
 };
 
-
-
 /* Function prototypes used in Physical.cpp */
 void Connect();
 void SetPortSettings(char *, HWND);
 DWORD WINAPI ProtocolThread(LPVOID);
+DWORD WINAPI ReadThread(LPVOID n);
 char * ReadPort(void);
 BOOL   WritePort(const void *);
 char * BuildBuffer(char *);
@@ -68,11 +70,17 @@ GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();
+void setTransmitting(BOOL transmit);
+BOOL isTransmit();
+void setReceiving(BOOL transmit);
+BOOL isReceive();
 void closePort();
 void PrintCommState(DCB);
 void WriteMode();
 void ReceiveMode();
 bool WaitForPacket(GrapefruitPacket * packet);
 bool WaitFor(char* object);
+BOOL WriteControlChar( char * );
+char * ReadControlChar();
 
 #endif
