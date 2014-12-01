@@ -521,9 +521,8 @@ GrapefruitPacket BuildPacket()
 
 	
 	int crcBits = crcFast((unsigned char*)GlobalPacket.data, DATA_SIZE);
-	int *helping = &crcBits;
-
-	strcpy(GlobalPacket.crc, (char*) helping);
+	unsigned char *helping = &crcBits;
+	GlobalPacket.crc[0] = helping[3]; GlobalPacket.crc[1] = helping[2];  GlobalPacket.crc[2] = helping[1]; GlobalPacket.crc[3] = helping[0]; 
 
 	OutputDebugStringA( "" + GlobalPacket.status);
 	OutputDebugStringA("" + GlobalPacket.sync);
@@ -541,6 +540,25 @@ GrapefruitPacket BuildPacket()
 		
 
 	return GlobalPacket;
+}
+
+bool checkPacketCrc(GrapefruitPacket gfp)
+{
+	char data[1020];
+	data[0] = gfp.status;
+	data[1] = gfp.sync;
+	for(int i = 0; i < DATA_SIZE; i++)
+	{
+		data[i+2] = gfp.data[i];
+	}
+	int crcCheck = crcFast(data, 1020)
+	unsigned char *crc = &crcCheck;
+	if(crc[3] == gfp.crc[0] && crc[2] == gfp.crc[1] && crc[1] == gfp.crc[2] && crc[0] == gfp.crc[3])
+	{
+		return true;
+	}
+	
+	return false;
 }
 
 /*------------------------------------------------------------------------------
