@@ -154,7 +154,6 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 			WriteMode();
 
 		}
-		
 	}
 	ExitThread(0);
 	return 0L;
@@ -170,7 +169,7 @@ DWORD WINAPI ReadThread(LPVOID n)
 
 		if (control[0] == ENQ)
 		{			
-			MessageBox(NULL, "woowwawiwawaa", "Got an ENQ", MB_OK);
+			//MessageBox(NULL, "woowwawiwawaa", "Got an ENQ", MB_OK);
 			//ReadMode
 			ReceiveMode();
 		}
@@ -191,7 +190,7 @@ char * ReadPort(void)
 		
 		if (dwEvtMask == EV_RXCHAR)
 		{
-			MessageBox(NULL, "Getting packets and stuff", "", MB_OK);
+			//MessageBox(NULL, "Getting packets and stuff", "", MB_OK);
 			
 			// Read in characters if character is found by waitcommevent
 			if (ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead,&portInfo.overlapped)) 
@@ -266,7 +265,7 @@ BOOL WriteControlChar( char * control )
 {
 	if (control[0] == ENQ)
 	{
-		MessageBox(NULL, "Sending ENQ", "ENQ", MB_OK);
+		//MessageBox(NULL, "Sending ENQ", "ENQ", MB_OK);
 	}
 	return WriteFile(portInfo.hComm, control,
 		sizeof(control), &portInfo.dwWritten, &portInfo.overlapped);
@@ -293,7 +292,7 @@ void ReceiveMode()
 	// The last syn received.
 	char syn = SYN1;
 
-	for (int i = 0; i > MAXSENT; i++)
+	for (int i = 0; i < MAXSENT; i++)
 	{
 		if (!WaitForPacket(&packet))
 		{
@@ -306,18 +305,18 @@ void ReceiveMode()
 		else if (true)
 		{
 			
-				MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
+				//MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
 			// checks if the second packet character is a syn bit 
-			if (packet.sync == syn)
+			if (packet.sync != syn || ( i == 0 && ( packet.sync == SYN1 || packet.sync == SYN2 ) ) )
 			{
-				MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
-				(syn == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
+				//MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
+				(packet.sync == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
 				GetCharsFromPort(packet.data);
 			}
 			// SEND ACK 
 			char c = ACK;
 			WriteControlChar(&c);
-			if (packet.status != EOT)
+			if (packet.status == EOT )
 			{
 				return;
 			}
@@ -363,7 +362,7 @@ void WriteMode()
 		while ( miss < MAXMISS )
 		{
 			//Send packet
-			MessageBox(NULL, "sending packet", "packet status", MB_OK);
+			//MessageBox(NULL, "sending packet", "packet status", MB_OK);
 
 			packet[0] = GlobalPacket.status;
 			packet[1] = GlobalPacket.sync;
@@ -440,7 +439,7 @@ void WriteMode()
 bool WaitForPacket(GrapefruitPacket* packet)
 {
 	packet = (GrapefruitPacket *) ReadPort();
-	MessageBox(NULL, "got packet", "asdf", MB_OK);
+	//MessageBox(NULL, "got packet", "asdf", MB_OK);
 	return true;
 }
 
