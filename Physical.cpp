@@ -172,12 +172,14 @@ DWORD WINAPI ReadThread(LPVOID n)
 		control = ReadControlChar();
 
 		if (control[0] == ENQ)
-		{			
+		{		
+			char c = ACK;
+			WriteControlChar(&c);
 			s->IncrementENQS();
+			//ReadMode
+			s->IncrementACKS();
 			PrintStats();
 			InvalidateStats();
-			//MessageBox(NULL, "woowwawiwawaa", "Got an ENQ", MB_OK);
-			//ReadMode
 			ReceiveMode();
 		}
 	}
@@ -314,7 +316,7 @@ void ReceiveMode()
 		if (!WaitForPacket(&packet))
 		{
 			//TO1 this will be replaced
-			Sleep(100);
+			Sleep(1000);
 			return;
 		}
 
@@ -372,87 +374,87 @@ void WriteMode()
 	Statistics *stats = Statistics::GetInstance();
 
 	//Wait for ACK
-	//command = WaitForSingleObject( portInfo.hComm, 10000000);
+	command = WaitForSingleObject( portInfo.hComm, 10000000);
 	//Sleep(1000);
 	//Did not timeout
-	//if ( command == WAIT_OBJECT_0 )
-	//{
-
-
-	controlC = ReadControlChar();
-
-	//Recieved an ACK
-	if ( controlC[0] == ACK )
+	if ( command == WAIT_OBJECT_0 )
 	{
-		MessageBox(NULL,"got a control char", "char", MB_OK);
-		char s[256];
-		sprintf(s, "CONTROL CHAR: %x", controlC);
-		OutputDebugString(s);
-		stats->IncrementACKS();
-		PrintStats();
-		InvalidateStats();
-			
-		for ( int i = 0; i < MAXSENT; i++)
+
+	
+		controlC = ReadControlChar();
+
+		//Recieved an ACK
+		if ( controlC[0] == ACK )
 		{
-			while ( miss < MAXMISS )
+			MessageBox(NULL,"got a control char", "char", MB_OK);
+			char s[256];
+			sprintf(s, "CONTROL CHAR: %x", controlC);
+			OutputDebugString(s);
+			stats->IncrementACKS();
+			PrintStats();
+			InvalidateStats();
+			
+			for ( int i = 0; i < MAXSENT; i++)
 			{
-				//Send packet
-				//MessageBox(NULL, "sending packet", "packet status", MB_OK);
-
-				packet[0] = GlobalPacket.status;
-				packet[1] = GlobalPacket.sync;
-
-				for (int i = 0 ; i < DATA_SIZE; i++)
+				while ( miss < MAXMISS )
 				{
-					packet[2 + i] = GlobalPacket.data[i];
-				}
-				for (int i = 0; i < CRC_SIZE; i++)
-				{
-					packet[DATA_SIZE + i] = GlobalPacket.crc[i];
-				}
+					//Send packet
+					//MessageBox(NULL, "sending packet", "packet status", MB_OK);
 
-				WritePort(&packet);
+					packet[0] = GlobalPacket.status;
+					packet[1] = GlobalPacket.sync;
 
-				//Wait for ACK
-				command = WaitForSingleObject( hThrd, 10000);
-				if ( command == WAIT_OBJECT_0 )
-				{
-					controlC = ReadControlChar();
+					for (int i = 0 ; i < DATA_SIZE; i++)
+					{
+						packet[2 + i] = GlobalPacket.data[i];
+					}
+					for (int i = 0; i < CRC_SIZE; i++)
+					{
+						packet[DATA_SIZE + i] = GlobalPacket.crc[i];
+					}
 
-					if (temp[0] == ACK)
-					{						
-						stats->IncrementACKS();
-						PrintStats();
-						InvalidateStats();
-						//ACK Received: update buffer and packetize
-						//Check for EOT
-						if ( GlobalPacket.status == EOT )
+					WritePort(&packet);
+
+					//Wait for ACK
+					command = WaitForSingleObject( hThrd, 10000);
+					if ( command == WAIT_OBJECT_0 )
+					{
+						controlC = ReadControlChar();
+
+						if (temp[0] == ACK)
+						{						
+							stats->IncrementACKS();
+							PrintStats();
+							InvalidateStats();
+							//ACK Received: update buffer and packetize
+							//Check for EOT
+							if ( GlobalPacket.status == EOT )
+							{
+								setTransmitting(false);
+								return;
+							}						
+							miss = 0;
+						}
+						//NAK Received: resend data and increment miss
+						else if ( controlC[0] == NAK )
 						{
-							setTransmitting(false);
-							return;
-						}						
-						miss = 0;
-					}
-					//NAK Received: resend data and increment miss
-					else if ( controlC[0] == NAK )
-					{
-						stats->IncrementNAKS();
-						PrintStats();
-						InvalidateStats();
-						miss++;
-					}
-					//No NAK or ACK: assumed failed
-					else
-					{
-						stats->IncrementPacketsLost();
-						PrintStats();							
-						InvalidateStats();
-						miss++;
+							stats->IncrementNAKS();
+							PrintStats();
+							InvalidateStats();
+							miss++;
+						}
+						//No NAK or ACK: assumed failed
+						else
+						{
+							stats->IncrementPacketsLost();
+							PrintStats();							
+							InvalidateStats();
+							miss++;
+						}
 					}
 				}
 			}
 		}
-		//}
 	}
 	stats->IncrementPacketsLost();
 	InvalidateStats();
