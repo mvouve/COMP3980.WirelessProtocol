@@ -7,10 +7,12 @@ Statistics::Statistics()
 {
 	NAKCount = 0;
 	ACKCount = 0;
+	ENQCount = 0;
 	packetsSent = 0;
 	packetsLost = 0;
 	received = 0;
 	receivedCorrupt = 0;
+
 }
 
 
@@ -48,6 +50,11 @@ int Statistics::GetACKS()
 
 }
 
+int Statistics::GetENQS()
+{
+	return ENQCount;
+
+}
 void Statistics::IncrementACKS()
 {
 	ACKCount++;
@@ -86,6 +93,12 @@ void Statistics::IncrementPacketsReceivedC()
 	return;
 }
 
+void Statistics::IncrementENQS()
+{
+	ENQCount++;
+	return;
+}
+
 
 void Statistics::ResetACKS()
 {
@@ -116,6 +129,11 @@ void  Statistics::ResetIncrementPacketsReceived()
 void  Statistics::ResetIncrementPacketsReceivedC()
 {
 	receivedCorrupt = 0;
+}
+
+void Statistics::ResetENQS()
+{
+	ENQCount = 0;
 }
 
 void Statistics::SaveStatsToFile()

@@ -46,7 +46,7 @@ HWND button;
 HWND textField;
 HDC hdc;
 string buffer;
-string tempBuffer;
+string outText;
 RECT txtWindow;
 Statistics *stats;
 
@@ -180,7 +180,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 	default:
 		return DefWindowProc(hwnd, Message, wParam, lParam);
 	}
-		PrintStats();
+	PrintStats();
 	return 0;
 }
 
@@ -336,15 +336,15 @@ void CheckMenu(WPARAM wP)
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
 				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
 
-				//Send ENQ to other side
-				char cChar = ENQ;
-				WriteControlChar(&cChar);
-				setTransmitting(true);
+				if (!isTransmit())
+				{
+					//Enter the write mode
+					setTransmitting(true);
+				}
 				BuildBuffer(buf);
 				BuildPacket();
 				//append the buffer to the global buffer
-				tempBuffer.append(buf);
-			
+				outText.append(buf);			
 
 				//Clear the textfield
 				SetDlgItemText(hwnd, IDM_TEXT, "");
@@ -628,9 +628,13 @@ void PrintStats()
 {
 	hdc = GetDC(hwnd);
 	std::stringstream s;
-
 	SetBkMode(hdc, TRANSPARENT);
 
+	//Print ENQS
+	s << "ENQS: " <<  stats->GetENQS();
+	TextOut(hdc, 500, 0, s.str().c_str(), s.str().length());
+
+	s.str("");
 	//Print ACKS
 	s << "ACKS: " <<  stats->GetACKS();
 	TextOut(hdc, 500, 20, s.str().c_str(), s.str().length());
@@ -668,4 +672,17 @@ void PrintStats()
 
 
 	ReleaseDC(hwnd, hdc);
+}
+
+void InvalidateStats()
+{
+	RECT *r = new RECT;
+	r->left = 500;
+	r->right = 700;
+	r->top = 0;
+	r->bottom = 160;
+
+	const RECT *rect = r;
+
+	InvalidateRect(hwnd, rect, true);
 }

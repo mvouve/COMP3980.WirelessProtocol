@@ -25,6 +25,7 @@ HWND curHwnd;
 DCB dcb = { 0 };
 char c[1018];
 GrapefruitPacket GlobalPacket;
+HANDLE hThrd;		// Handle to the read thread
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -35,7 +36,6 @@ GrapefruitPacket GlobalPacket;
 /*-----------------------------------------------------------------------------*/
 void Connect()
 {
-	HANDLE hThrd;		// Handle to the read thread
 	DWORD threadID;		// ID for the read thread
 	
 	portInfo.strReceive = new char[LINE_SIZE]; // Buffer for received characters
@@ -161,6 +161,7 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 
 DWORD WINAPI ReadThread(LPVOID n)
 {
+	Statistics *s = Statistics::GetInstance();
 	char* control;
 
 	while (true)
@@ -169,6 +170,9 @@ DWORD WINAPI ReadThread(LPVOID n)
 
 		if (control[0] == ENQ)
 		{			
+			s->IncrementENQS();
+			PrintStats();
+			InvalidateStats();
 			//MessageBox(NULL, "woowwawiwawaa", "Got an ENQ", MB_OK);
 			//ReadMode
 			ReceiveMode();
@@ -263,10 +267,6 @@ BOOL WritePort( const void * message )
 
 BOOL WriteControlChar( char * control )
 {
-	if (control[0] == ENQ)
-	{
-		//MessageBox(NULL, "Sending ENQ", "ENQ", MB_OK);
-	}
 	return WriteFile(portInfo.hComm, control,
 		sizeof(control), &portInfo.dwWritten, &portInfo.overlapped);
 }
@@ -346,75 +346,95 @@ void WriteMode()
 {
 	char temp[2];
 	char packet[PACKET_SIZE];
+	DWORD command;
+	int miss = 0;
+	char *controlC;
+	Statistics *stats = Statistics::GetInstance();
 
 	//Wait for ACK
-	if (!WaitFor(temp))
+	command = WaitForSingleObject( hThrd, 10000);
+	
+	//Did not timeout
+	if ( command == WAIT_OBJECT_0 )
 	{
-		//Timeout
-		Sleep(100);
-		return;
-	}
+		controlC = ReadControlChar();
 
-	int miss = 0;
-
-	for ( int i = 0; i < MAXSENT; i++)
-	{
-		while ( miss < MAXMISS )
+		//Recieved an ACK
+		if ( controlC[0] == ACK )
 		{
-			//Send packet
-			//MessageBox(NULL, "sending packet", "packet status", MB_OK);
-
-			packet[0] = GlobalPacket.status;
-			packet[1] = GlobalPacket.sync;
-
-			for (int i = 0 ; i < DATA_SIZE; i++)
+			stats->IncrementACKS();
+			PrintStats();
+			InvalidateStats();
+			
+			for ( int i = 0; i < MAXSENT; i++)
 			{
-				packet[2 + i] = GlobalPacket.data[i];
-			}
-			for (int i = 0; i < CRC_SIZE; i++)
-			{
-				packet[DATA_SIZE + i] = GlobalPacket.crc[i];
-			}
-
-			WritePort(&packet);
-
-			//Wait for ACK
-			if (!WaitFor(temp))
-			{
-				//Timeout
-				Sleep(100);
-				return;
-			}
-
-			if (temp[0] == ACK)
-			{										
-				//ACK Received: update buffer and packetize
-				//Check for EOT
-				for (int i = 0; i < sizeof(GlobalPacket.data)/sizeof(char); i++)
+				while ( miss < MAXMISS )
 				{
-					if ( GlobalPacket.data[i] == EOT )
+					//Send packet
+					//MessageBox(NULL, "sending packet", "packet status", MB_OK);
+
+					packet[0] = GlobalPacket.status;
+					packet[1] = GlobalPacket.sync;
+
+					for (int i = 0 ; i < DATA_SIZE; i++)
 					{
-						return;
+						packet[2 + i] = GlobalPacket.data[i];
 					}
-				}							
-				miss = 0;
-			}
+					for (int i = 0; i < CRC_SIZE; i++)
+					{
+						packet[DATA_SIZE + i] = GlobalPacket.crc[i];
+					}
 
-			//NAK Received: resend data and increment miss
-			else if ( temp[0] == NAK )
-			{
-				miss++;
-				break;
-			}
+					WritePort(&packet);
 
-			//No ACK or NAK; resend and increment
-			else
-			{
-				miss++;
-				break;
+					//Wait for ACK
+					command = WaitForSingleObject( hThrd, 10000);
+					if ( command == WAIT_OBJECT_0 )
+					{
+						controlC = ReadControlChar();
+
+						if (temp[0] == ACK)
+						{						
+							stats->IncrementACKS();
+							PrintStats();
+							InvalidateStats();
+							//ACK Received: update buffer and packetize
+							//Check for EOT
+							for (int i = 0; i < sizeof(GlobalPacket.data)/sizeof(char); i++)
+							{
+								if ( GlobalPacket.data[i] == EOT )
+								{
+									return;
+								}
+							}							
+							miss = 0;
+						}
+						//NAK Received: resend data and increment miss
+						else if ( controlC[0] == NAK )
+						{
+							stats->IncrementNAKS();
+							PrintStats();
+							InvalidateStats();
+							miss++;
+						}
+						//No NAK or ACK: assumed failed
+						else
+						{
+							stats->IncrementPacketsLost();
+							PrintStats();							
+							InvalidateStats();
+							miss++;
+						}
+					}
+				}
 			}
 		}
 	}
+
+	stats->IncrementPacketsLost();
+	PrintStats();
+
+	//No ACK; end transmission
 	setTransmitting(false);
 }
 
@@ -440,31 +460,6 @@ bool WaitForPacket(GrapefruitPacket* packet)
 {
 	packet = (GrapefruitPacket *) ReadPort();
 	//MessageBox(NULL, "got packet", "asdf", MB_OK);
-	return true;
-}
-
-/*------------------------------------------------------------------------------
--- FUNCTION: bool WaitFor(char* object)
---
--- PARAMS:	char* packet: A buffer to read in the recieved packet onto.
---
--- PURPOSE:  This function holds the thread for a predefined wait time, reading
---			 for an incoming packet. when a packet is received it writes the
---			 data to the packet char*.
---
---
---
--- DESIGNER: Marc Vouve A00848381
---
---
--- PROGRAMMER: Marc Vouve A00848381
---
--- RETURN: True on read false on no incoming packets
-------------------------------------------------------------------------------*/
-bool WaitFor(char* object)
-{
-	object = ReadPort();
-
 	return true;
 }
 
@@ -587,6 +582,13 @@ BOOL isConnected()
 /*-----------------------------------------------------------------------------*/
 void setTransmitting(BOOL transmit)
 {
+	Statistics *s = Statistics::GetInstance();
+	s->IncrementENQS();
+	PrintStats();
+	InvalidateStats();
+	//Send ENQ to other side
+	char cChar = ENQ;
+	WriteControlChar(&cChar);
 	portInfo.transmitting = transmit;
 }
 

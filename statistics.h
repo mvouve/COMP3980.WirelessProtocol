@@ -12,15 +12,18 @@ class Statistics
 		int GetPacketsLost();
 		int GetReceived();
 		int GetReceivedC();
+		int GetENQS();
 		static Statistics * GetInstance();	
 		void IncrementACKS();
 		void IncrementNAKS();
+		void IncrementENQS();
 		void IncrementPacketsLost();
 		void IncrementPacketsSent();
 		void IncrementPacketsReceived();
 		void IncrementPacketsReceivedC();
 		void ResetACKS();
 		void ResetNAKS();
+		void ResetENQS();
 		void ResetPacketsLost();
 		void ResetIncrementPacketsSent();
 		void ResetIncrementPacketsReceived();
@@ -35,4 +38,5 @@ class Statistics
 		int packetsLost;
 		int received;
 		int receivedCorrupt;
+		int ENQCount;
 };
