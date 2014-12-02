@@ -6,15 +6,17 @@ class Statistics
 {
 	public:
 		Statistics();
-		int GetNAKS();
-		int GetACKS();	
+		int GetNAKS();		
+		int GetACKSent();	
+		int GetACKReceived();	
 		int GetPacketsSent();
 		int GetPacketsLost();
 		int GetReceived();
 		int GetReceivedC();
 		int GetENQS();
 		static Statistics * GetInstance();	
-		void IncrementACKS();
+		void IncrementACKSSent();		
+		void IncrementACKSReceived();
 		void IncrementNAKS();
 		void IncrementENQS();
 		void IncrementPacketsLost();
@@ -25,15 +27,16 @@ class Statistics
 		void ResetNAKS();
 		void ResetENQS();
 		void ResetPacketsLost();
-		void ResetIncrementPacketsSent();
-		void ResetIncrementPacketsReceived();
-		void ResetIncrementPacketsReceivedC();
+		void ResetPacketsSent();
+		void ResetPacketsReceived();
+		void ResetPacketsReceivedC();
 		void SaveStatsToFile();
 
 	private:
 		static Statistics *instance;
 		int NAKCount;
-		int ACKCount;
+		int ACKSentCount;		
+		int ACKReceivedCount;
 		int packetsSent;
 		int packetsLost;
 		int received;

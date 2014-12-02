@@ -6,13 +6,13 @@ Statistics *Statistics::instance = nullptr;
 Statistics::Statistics()
 {
 	NAKCount = 0;
-	ACKCount = 0;
+	ACKSentCount = 0;
+	ACKReceivedCount = 0;
 	ENQCount = 0;
 	packetsSent = 0;
 	packetsLost = 0;
 	received = 0;
 	receivedCorrupt = 0;
-
 }
 
 
@@ -44,9 +44,15 @@ int Statistics::GetReceivedC()
 }
 
 
-int Statistics::GetACKS()
+int Statistics::GetACKSent()
 {
-	return ACKCount;
+	return ACKSentCount;
+
+}
+
+int Statistics::GetACKReceived()
+{
+	return ACKReceivedCount;
 
 }
 
@@ -55,9 +61,17 @@ int Statistics::GetENQS()
 	return ENQCount;
 
 }
-void Statistics::IncrementACKS()
+
+void Statistics::IncrementACKSSent()
 {
-	ACKCount++;
+	ACKSentCount++;
+	return;
+
+}
+
+void Statistics::IncrementACKSReceived()
+{
+	ACKReceivedCount++;
 	return;
 
 }
@@ -102,7 +116,8 @@ void Statistics::IncrementENQS()
 
 void Statistics::ResetACKS()
 {
-	ACKCount = 0;	
+	ACKSentCount = 0;	
+	ACKReceivedCount = 0;
 	return;
 }
 
@@ -117,16 +132,16 @@ void  Statistics::ResetPacketsLost()
 	packetsLost = 0;
 }
 
-void  Statistics::ResetIncrementPacketsSent()
+void  Statistics::ResetPacketsSent()
 {
 	packetsSent = 0;
 }
 
-void  Statistics::ResetIncrementPacketsReceived()
+void  Statistics::ResetPacketsReceived()
 {
 	received = 0;
 }
-void  Statistics::ResetIncrementPacketsReceivedC()
+void  Statistics::ResetPacketsReceivedC()
 {
 	receivedCorrupt = 0;
 }
@@ -144,7 +159,7 @@ void Statistics::SaveStatsToFile()
 	if (outFile.is_open())
 	{
 		outFile << "NAKs: " << NAKCount << endl;
-		outFile << "ACKs: " << ACKCount << endl;
+		outFile << "ACKs: " << ACKSentCount << endl;
 		outFile << "Packets Sent: " << packetsSent << endl;
 		outFile.close();
 

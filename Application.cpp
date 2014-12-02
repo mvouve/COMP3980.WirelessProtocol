@@ -638,39 +638,45 @@ void PrintStats()
 
 	s.str("");
 	//Print ACKS
-	s << "ACKS: " <<  stats->GetACKS();
+	s << "ACKS Sent: " <<  stats->GetACKSent();
 	TextOut(hdc, 500, 20, s.str().c_str(), s.str().length());
 
-	//Print NAKS
+	
+	//Print ACKS
 	s.str("");
-	s << "NAKS: " <<  stats->GetNAKS();
+	s << "ACKS Received: " <<  stats->GetACKReceived();
 	TextOut(hdc, 500, 40, s.str().c_str(), s.str().length());
 
 	//Print NAKS
 	s.str("");
 	s << "NAKS: " <<  stats->GetNAKS();
-	TextOut(hdc, 500, 40, s.str().c_str(), s.str().length());
+	TextOut(hdc, 500, 60, s.str().c_str(), s.str().length());
+
+	//Print NAKS
+	s.str("");
+	s << "NAKS: " <<  stats->GetNAKS();
+	TextOut(hdc, 500, 80, s.str().c_str(), s.str().length());
 
 	//Print PacketsSent
 	s.str("");
 	s << "Sent: " <<  stats->GetPacketsSent();
-	TextOut(hdc, 500, 60, s.str().c_str(), s.str().length());
+	TextOut(hdc, 500, 100, s.str().c_str(), s.str().length());
 
 	//Print PacketsLost
 	s.str("");
 	s << "Lost: " <<  stats->GetPacketsLost();
-	TextOut(hdc, 500, 80, s.str().c_str(), s.str().length());
+	TextOut(hdc, 500, 120, s.str().c_str(), s.str().length());
 
 
 	//Print Received
 	s.str("");
 	s << "Received: " <<  stats->GetReceived();
-	TextOut(hdc, 500, 100, s.str().c_str(), s.str().length());
+	TextOut(hdc, 500, 140, s.str().c_str(), s.str().length());
 
 	//Print Received Corrupted
 	s.str("");
 	s << "Corrutped Packets: " <<  stats->GetReceivedC();
-	TextOut(hdc, 500, 120, s.str().c_str(), s.str().length());
+	TextOut(hdc, 500, 160, s.str().c_str(), s.str().length());
 
 
 	ReleaseDC(hwnd, hdc);
@@ -682,7 +688,7 @@ void InvalidateStats()
 	r->left = 500;
 	r->right = 700;
 	r->top = 0;
-	r->bottom = 160;
+	r->bottom = 180;
 
 	const RECT *rect = r;
 

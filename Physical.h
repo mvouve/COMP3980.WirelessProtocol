@@ -78,8 +78,9 @@ void closePort();
 void PrintCommState(DCB);
 void WriteMode();
 void ReceiveMode();
-bool WaitForPacket(GrapefruitPacket * packet);
+bool WaitForPacket(char * packet);
 BOOL WriteControlChar( char * );
 char * ReadControlChar();
+char * ReceiveControlChar(double);
 
 #endif

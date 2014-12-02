@@ -70,11 +70,6 @@ void Connect()
 **
 /*-----------------------------------------------------------------------------*/
 
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! NOTE:
-!!	THIS FUNCTION ONLY WORKS AFTER THE CONNECTION IS CREATED
-!!  THIS NEEDS TO BE FIXED.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 void SetPortSettings(char *s, HWND hwnd)
 {
 	portInfo.lpszCommName = TEXT(s);
@@ -169,18 +164,18 @@ DWORD WINAPI ReadThread(LPVOID n)
 
 	while (true)
 	{
-		control = ReadControlChar();
+		if (!isTransmit())
+		{
+			control = ReceiveControlChar(100);
 
-		if (control[0] == ENQ)
-		{		
-			char c = ACK;
-			WriteControlChar(&c);
-			s->IncrementENQS();
-			//ReadMode
-			s->IncrementACKS();
-			PrintStats();
-			InvalidateStats();
-			ReceiveMode();
+			if (control[0] == ENQ)
+			{		
+				s->IncrementENQS();
+				PrintStats();
+				InvalidateStats();
+				//ReadMode
+				ReceiveMode();
+			}
 		}
 	}
 
@@ -228,6 +223,7 @@ char * ReadControlChar(void)
 
 		// Wait for a comm event
 		WaitCommEvent(portInfo.hComm, &dwEvtMask, NULL);
+
 		
 		if (dwEvtMask == EV_RXCHAR)
 		{
@@ -235,10 +231,7 @@ char * ReadControlChar(void)
 			if (ReadFile(portInfo.hComm,  ccontrol, sizeof(ccontrol), &portInfo.dwRead,&portInfo.overlapped)) 
 			{
 				//GetCharsFromPort(ccontrol);
-				if (portInfo.dwRead == 0)
-				{
-					MessageBox(NULL, "Took shit", "Shat pants", MB_OK);	
-				}
+		
 			}
 			else if (GetLastError() == ERROR_IO_PENDING)
 			{
@@ -298,7 +291,7 @@ BOOL WriteControlChar( char * control )
 ------------------------------------------------------------------------------*/
 void ReceiveMode()
 {
-	GrapefruitPacket packet;
+	char *packet = "";
 	// The last syn received.
 	char syn = SYN1;	
 	char c = ACK;
@@ -307,13 +300,13 @@ void ReceiveMode()
 	//Send ACK back to them for packet
 
 	WriteControlChar(&c);
-	stats->IncrementACKS();
+	stats->IncrementACKSSent();
 	PrintStats();
 	InvalidateStats();
 
 	for (int i = 0; i < MAXSENT; i++)
 	{
-		if (!WaitForPacket(&packet))
+		if (!WaitForPacket(packet))
 		{
 			//TO1 this will be replaced
 			Sleep(1000);
@@ -325,20 +318,21 @@ void ReceiveMode()
 		{
 			
 			// checks if the second packet character is a syn bit 
-			if (packet.sync != syn || ( i == 0 && ( packet.sync == SYN1 || packet.sync == SYN2 ) ) )
+			if (packet[1] != syn || ( i == 0 && ( packet[1] == SYN1 || packet[1]
+				== SYN2 ) ) )
 			{
 				//MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
-				(packet.sync == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
+				(packet[1] == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
 	
-				//GetCharsFromPort(&packet.data);
+				GetCharsFromPort(packet);
 			}
 			// SEND ACK on packet
 			WriteControlChar(&c);
-			stats->IncrementACKS();
+			stats->IncrementACKSSent();
 			PrintStats();
 			InvalidateStats();
 
-			if (packet.status == EOT )
+			if (packet[1] == EOT )
 			{
 				return;
 			}
@@ -368,94 +362,83 @@ void WriteMode()
 {
 	char temp[2];
 	char packet[PACKET_SIZE];
-	DWORD command;
 	int miss = 0;
 	char *controlC;
 	Statistics *stats = Statistics::GetInstance();
 
-	//Wait for ACK
-	command = WaitForSingleObject( portInfo.hComm, 10000000);
-	//Sleep(1000);
-	//Did not timeout
-	if ( command == WAIT_OBJECT_0 )
+	//Wait for ACK		
+	controlC = ReceiveControlChar(100);
+
+	//Recieved an ACK
+	if ( controlC[0] == ACK )
 	{
-
-	
-		controlC = ReadControlChar();
-
-		//Recieved an ACK
-		if ( controlC[0] == ACK )
-		{
-			MessageBox(NULL,"got a control char", "char", MB_OK);
-			char s[256];
-			sprintf(s, "CONTROL CHAR: %x", controlC);
-			OutputDebugString(s);
-			stats->IncrementACKS();
-			PrintStats();
-			InvalidateStats();
+		MessageBox(NULL,"got a control char", "char", MB_OK);
+		char s[256];
+		sprintf(s, "CONTROL CHAR: %x", controlC);
+		OutputDebugString(s);
+		stats->IncrementACKSReceived();
+		PrintStats();
+		InvalidateStats();
 			
-			for ( int i = 0; i < MAXSENT; i++)
+		for ( int i = 0; i < MAXSENT; i++)
+		{
+			while ( miss < MAXMISS )
 			{
-				while ( miss < MAXMISS )
+				//Send packet
+				//MessageBox(NULL, "sending packet", "packet status", MB_OK);
+
+				packet[0] = GlobalPacket.status;
+				packet[1] = GlobalPacket.sync;
+
+				for (int i = 0 ; i < DATA_SIZE; i++)
 				{
-					//Send packet
-					//MessageBox(NULL, "sending packet", "packet status", MB_OK);
+					packet[2 + i] = GlobalPacket.data[i];
+				}
+				for (int i = 0; i < CRC_SIZE; i++)
+				{
+					packet[DATA_SIZE + i] = GlobalPacket.crc[i];
+				}
 
-					packet[0] = GlobalPacket.status;
-					packet[1] = GlobalPacket.sync;
+				WritePort(&packet);
 
-					for (int i = 0 ; i < DATA_SIZE; i++)
+				//Wait for ACK
+				controlC = ReceiveControlChar(1000);
+
+				if (temp[0] == ACK)
+				{						
+					stats->IncrementACKSReceived();
+					PrintStats();
+					InvalidateStats();
+					//ACK Received: update buffer and packetize
+					//Check for EOT
+					if ( GlobalPacket.status == EOT )
 					{
-						packet[2 + i] = GlobalPacket.data[i];
-					}
-					for (int i = 0; i < CRC_SIZE; i++)
-					{
-						packet[DATA_SIZE + i] = GlobalPacket.crc[i];
-					}
-
-					WritePort(&packet);
-
-					//Wait for ACK
-					command = WaitForSingleObject( hThrd, 10000);
-					if ( command == WAIT_OBJECT_0 )
-					{
-						controlC = ReadControlChar();
-
-						if (temp[0] == ACK)
-						{						
-							stats->IncrementACKS();
-							PrintStats();
-							InvalidateStats();
-							//ACK Received: update buffer and packetize
-							//Check for EOT
-							if ( GlobalPacket.status == EOT )
-							{
-								setTransmitting(false);
-								return;
-							}						
-							miss = 0;
-						}
-						//NAK Received: resend data and increment miss
-						else if ( controlC[0] == NAK )
-						{
-							stats->IncrementNAKS();
-							PrintStats();
-							InvalidateStats();
-							miss++;
-						}
-						//No NAK or ACK: assumed failed
-						else
-						{
-							stats->IncrementPacketsLost();
-							PrintStats();							
-							InvalidateStats();
-							miss++;
-						}
-					}
+						setTransmitting(false);
+						return;
+					}						
+					miss = 0;
 				}
 			}
+
 		}
 	}
+	//NAK Received: resend data and increment miss
+	else if ( controlC[0] == NAK )
+	{
+		stats->IncrementNAKS();
+		PrintStats();
+		InvalidateStats();
+		miss++;
+	}
+	//No NAK or ACK: assumed failed
+	else
+	{
+		stats->IncrementPacketsLost();
+		PrintStats();							
+		InvalidateStats();
+		miss++;
+	}
+
 	stats->IncrementPacketsLost();
 	InvalidateStats();
 	PrintStats();
@@ -482,9 +465,9 @@ void WriteMode()
 --
 -- RETURN: True on read false on no incoming packets
 ------------------------------------------------------------------------------*/
-bool WaitForPacket(GrapefruitPacket* packet)
+bool WaitForPacket(char* packet)
 {
-	packet = (GrapefruitPacket *) ReadPort();
+	packet = ReadPort();
 	//MessageBox(NULL, "got packet", "asdf", MB_OK);
 	return true;
 }
@@ -665,6 +648,57 @@ void closePort()
 }
 
 
+char * ReceiveControlChar(double timeout)
+{
+	DWORD numCharsRead;
+	char *temp ="";
+	DWORD commEvent;
 
+	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
 
+	commTimeouts->ReadTotalTimeoutConstant = 0;
+	commTimeouts->ReadTotalTimeoutConstant = timeout;
 
+	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
+	{
+		MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
+		return "";
+	}
+	
+	if (!SetCommMask(portInfo.hComm, EV_RXCHAR))
+	{
+		MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
+		return "";
+	}
+
+	//clear port
+	PurgeComm(portInfo.hComm, PURGE_RXCLEAR);	
+	PurgeComm(portInfo.hComm, PURGE_TXCLEAR);
+	PurgeComm(portInfo.hComm, PURGE_TXABORT);	
+	PurgeComm(portInfo.hComm, PURGE_RXABORT);
+
+	//Read port
+	if (WaitCommEvent(portInfo.hComm, &commEvent, &portInfo.overlapped))
+	{
+		if (!ReadFile(portInfo.hComm, &temp, 1, &numCharsRead, &portInfo.overlapped))
+		{
+			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
+		}
+	}
+	/*else
+	{
+		DWORD err = GetLastError();
+		Sleep(100);
+ 		if (err == ERROR_IO_PENDING)
+		{
+			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
+
+			if (!ReadFile(portInfo.hComm, &temp, 1, &numCharsRead, &portInfo.overlapped))
+			{
+				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
+			}
+		}
+	}*/
+	
+	return temp;
+}
