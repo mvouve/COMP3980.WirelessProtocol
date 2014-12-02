@@ -332,18 +332,13 @@ void CheckMenu(WPARAM wP)
 			{
 				int i;
 				char* buf;
+				setBufferStatus(true);
 
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
 				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
 
 				BuildBuffer(buf);
 				BuildPacket();
-
-				if (!isTransmit())
-				{
-					//Enter the write mode
-					setTransmitting(true);
-				}
 				
 				//append the buffer to the global buffer
 				outText.append(buf);			

@@ -45,6 +45,7 @@ struct PortInfo {
 	BOOLEAN transmitting;
 	BOOLEAN receiving;
 	DWORD dwWritten, dwRead;
+	BOOLEAN empty;
 	COMMCONFIG cc;
 	DCB dcb;
 	OVERLAPPED overlapped;
@@ -79,8 +80,10 @@ void PrintCommState(DCB);
 void WriteMode();
 void ReceiveMode();
 bool WaitForPacket(char * packet);
-BOOL WriteControlChar( char * );
+BOOL WriteControlChar( char );
 char * ReadControlChar();
 char * ReceiveControlChar(double);
+void setBufferStatus(BOOL);
+BOOL isBufferEmpty();
 
 #endif

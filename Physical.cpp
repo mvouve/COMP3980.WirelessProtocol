@@ -146,11 +146,18 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 	
 	while (true)
 	{
-		if (isTransmit() )
+		if ( isConnected() && !isBufferEmpty() )
 		{
-			//Send Mode
-			WriteMode();
+			if (!isTransmit()  )
+			{
+				MessageBox(NULL, "Transmitting", "yay!", MB_OK);
+				//Enter the write mode
+				setTransmitting(true);
 
+				//Enter write mode
+				WriteMode();
+				setTransmitting(false);
+			}
 		}
 	}
 	ExitThread(0);
@@ -164,7 +171,7 @@ DWORD WINAPI ReadThread(LPVOID n)
 
 	while (true)
 	{
-		if (isTransmit())
+		if (!isTransmit())
 		{
 			control = ReadControlChar();
 
@@ -222,21 +229,29 @@ char * ReadControlChar(void)
 	char  ccontrol[1];
 
 		// Wait for a comm event
-		WaitCommEvent(portInfo.hComm, &dwEvtMask, NULL);
-
-		
-		if (dwEvtMask == EV_RXCHAR)
+		if(WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
 		{
 			// Read in characters if character is found by waitcommevent
-			if (ReadFile(portInfo.hComm,  ccontrol, sizeof(ccontrol), &portInfo.dwRead,&portInfo.overlapped)) 
+			if (!ReadFile(portInfo.hComm, ccontrol, 1, &portInfo.dwRead, &portInfo.overlapped)) 
 			{
-				//GetCharsFromPort(ccontrol);
-		
+				if (GetLastError() == ERROR_IO_PENDING)
+				{
+					GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
+					//GetCharsFromPort(ccontrol);
+				}
 			}
-			else if (GetLastError() == ERROR_IO_PENDING)
+		}
+		else
+		{
+			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
+			// Read in characters if character is found by waitcommevent
+			if (!ReadFile(portInfo.hComm, ccontrol, 1, &portInfo.dwRead, &portInfo.overlapped)) 
 			{
-				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
-				//GetCharsFromPort(ccontrol);
+				if (GetLastError() == ERROR_IO_PENDING)
+				{
+					GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwRead, TRUE);
+					//GetCharsFromPort(ccontrol);
+				}
 			}
 		}
 		dwEvtMask = NULL;
@@ -268,9 +283,9 @@ BOOL WritePort( const void * message )
 }
 
 
-BOOL WriteControlChar( char * control )
+BOOL WriteControlChar( char control )
 {
-	if (!WriteFile(portInfo.hComm, control, sizeof(control), &portInfo.dwWritten, &portInfo.overlapped))
+	if (!WriteFile(portInfo.hComm, &control, 1, &portInfo.dwWritten, &portInfo.overlapped))
 	{
 		if (GetLastError() == 0x3e5)
 		{
@@ -311,7 +326,7 @@ void ReceiveMode()
 
 	//Send ACK back to them for packet
 
-	WriteControlChar(&c);
+	WriteControlChar(c);
 	stats->IncrementACKSSent();
 	PrintStats();
 	InvalidateStats();
@@ -339,7 +354,7 @@ void ReceiveMode()
 				GetCharsFromPort(packet);
 			}
 			// SEND ACK on packet
-			WriteControlChar(&c);
+			WriteControlChar(c);
 			stats->IncrementACKSSent();
 			PrintStats();
 			InvalidateStats();
@@ -353,7 +368,7 @@ void ReceiveMode()
 		{
 			//Send NAK
 			char c = NAK;
-			WriteControlChar(&c);
+			WriteControlChar(c);
 		}
 	}	
 }
@@ -426,6 +441,9 @@ void WriteMode()
 					//Check for EOT
 					if ( GlobalPacket.status == EOT )
 					{
+						
+						//*******************CHANGE LATER*********************
+						setBufferStatus(false);
 						setTransmitting(false);
 						return;
 					}						
@@ -434,7 +452,6 @@ void WriteMode()
 			}
 
 		}
-		setTransmitting(false);
 	}
 	//NAK Received: resend data and increment miss
 	else if ( controlC[0] == NAK )
@@ -458,7 +475,6 @@ void WriteMode()
 	PrintStats();*/
 
 	//No ACK; end transmission
-	setTransmitting(false);
 }
 
 /*------------------------------------------------------------------------------
@@ -646,7 +662,7 @@ void setTransmitting(BOOL transmit)
 		InvalidateStats();
 		//Send ENQ to other side
 		char cChar = ENQ;
-		WriteControlChar(&cChar);
+		WriteControlChar(cChar);
 	}
 	portInfo.transmitting = transmit;
 }
@@ -736,4 +752,18 @@ char * ReceiveControlChar(double timeout)
 	
 	portInfo.dwRead = 0;
 	return temp;
+}
+
+void setBufferStatus(BOOL status)
+{
+	portInfo.empty = status;
+}
+
+BOOL isBufferEmpty()
+{
+	if (portInfo.empty = true)
+	{
+		return true;
+	}
+		return false;
 }
