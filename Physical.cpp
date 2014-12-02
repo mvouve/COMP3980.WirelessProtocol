@@ -164,9 +164,9 @@ DWORD WINAPI ReadThread(LPVOID n)
 
 	while (true)
 	{
-		if (!isTransmit())
+		if (isTransmit())
 		{
-			control = ReceiveControlChar(100);
+			control = ReadControlChar();
 
 			if (control[0] == ENQ)
 			{		
@@ -270,8 +270,20 @@ BOOL WritePort( const void * message )
 
 BOOL WriteControlChar( char * control )
 {
-	return WriteFile(portInfo.hComm, control,
-		sizeof(control), &portInfo.dwWritten, &portInfo.overlapped);
+	if (!WriteFile(portInfo.hComm, control, sizeof(control), &portInfo.dwWritten, &portInfo.overlapped))
+	{
+		if (GetLastError() == 0x3e5)
+		{
+			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &portInfo.dwWritten, TRUE);
+		}
+
+		portInfo.dwWritten = 0;
+		return TRUE;
+		
+	}
+	portInfo.dwWritten = 0;
+
+	return TRUE;
 }
 
 
@@ -367,7 +379,8 @@ void WriteMode()
 	Statistics *stats = Statistics::GetInstance();
 
 	//Wait for ACK		
-	controlC = ReceiveControlChar(100);
+	MessageBox(NULL,"reading control char", "char", MB_OK);
+	controlC = ReceiveControlChar(10000);
 
 	//Recieved an ACK
 	if ( controlC[0] == ACK )
@@ -421,6 +434,7 @@ void WriteMode()
 			}
 
 		}
+		setTransmitting(false);
 	}
 	//NAK Received: resend data and increment miss
 	else if ( controlC[0] == NAK )
@@ -439,9 +453,9 @@ void WriteMode()
 		miss++;
 	}
 
-	stats->IncrementPacketsLost();
+	/*stats->IncrementPacketsLost();
 	InvalidateStats();
-	PrintStats();
+	PrintStats();*/
 
 	//No ACK; end transmission
 	setTransmitting(false);
@@ -473,12 +487,17 @@ bool WaitForPacket(char* packet)
 }
 
 /*------------------------------------------------------------------------------
---	FUNCTION: WritePort(char *)
+--	FUNCTION: BuildBuffer(char *)
 --
 --	PURPOSE: Sends characters to the COM port
 --
 --	PARAMETERS:
---		c		- character to be written to the COM port
+--		strToSend		- chars to be added to the buffer
+--
+-- DESIGNER: Filip Gutica A00781910
+--
+--
+-- PROGRAMMER: Filip Gutica A00781910
 --
 /*-----------------------------------------------------------------------------*/
 char * BuildBuffer(char * strToSend)
@@ -498,6 +517,20 @@ char * BuildBuffer(char * strToSend)
 	
 }
 
+/*------------------------------------------------------------------------------
+--	FUNCTION: BuildPacket(char *)
+--
+--	PURPOSE: Sends characters to the COM port
+--
+--	PARAMETERS:
+--		strToSend		- chars to be added to the buffer
+--
+-- DESIGNER: Filip Gutica A00781910
+--
+--
+-- PROGRAMMER: Filip Gutica A00781910
+--
+/*-----------------------------------------------------------------------------*/
 GrapefruitPacket BuildPacket()
 {
 	
@@ -541,11 +574,7 @@ GrapefruitPacket BuildPacket()
 	
 	//OutputDebugStringA(GlobalPacket.crc);
 
-	// Write the character sent to this function to the port.
 
-	
-	//WriteFile(portInfo.hComm,  &GlobalPacket,
-		//sizeof(GlobalPacket), &portInfo.dwWritten, &portInfo.overlapped);
 		
 
 	return GlobalPacket;
@@ -656,7 +685,7 @@ char * ReceiveControlChar(double timeout)
 
 	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
 
-	commTimeouts->ReadTotalTimeoutConstant = 0;
+	commTimeouts->ReadTotalTimeoutMultiplier = 0;
 	commTimeouts->ReadTotalTimeoutConstant = timeout;
 
 	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
@@ -671,6 +700,7 @@ char * ReceiveControlChar(double timeout)
 		return "";
 	}
 
+
 	//clear port
 	PurgeComm(portInfo.hComm, PURGE_RXCLEAR);	
 	PurgeComm(portInfo.hComm, PURGE_TXCLEAR);
@@ -680,12 +710,14 @@ char * ReceiveControlChar(double timeout)
 	//Read port
 	if (WaitCommEvent(portInfo.hComm, &commEvent, &portInfo.overlapped))
 	{
-		if (!ReadFile(portInfo.hComm, &temp, 1, &numCharsRead, &portInfo.overlapped))
+		if (!ReadFile(portInfo.hComm, &temp, 1, &portInfo.dwRead, &portInfo.overlapped))
 		{
 			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
 		}
+
+		OutputDebugString(temp);
 	}
-	/*else
+	else
 	{
 		DWORD err = GetLastError();
 		Sleep(100);
@@ -693,12 +725,15 @@ char * ReceiveControlChar(double timeout)
 		{
 			GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
 
-			if (!ReadFile(portInfo.hComm, &temp, 1, &numCharsRead, &portInfo.overlapped))
+			if (!ReadFile(portInfo.hComm, &temp, 1, &portInfo.dwRead, &portInfo.overlapped))
 			{
 				GetOverlappedResult(portInfo.hComm, &portInfo.overlapped, &numCharsRead, TRUE);
 			}
+
+			OutputDebugString(temp);
 		}
-	}*/
+	}
 	
+	portInfo.dwRead = 0;
 	return temp;
 }
