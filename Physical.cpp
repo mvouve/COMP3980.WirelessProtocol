@@ -16,10 +16,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "Physical.h"
-#include "Application.h"
-#include "Protocol.h"
-#include <stdio.h>
 
+// MAXIMUM VISABLITIY
 PortInfo portInfo;
 HWND curHwnd;
 DCB dcb = { 0 };
@@ -139,7 +137,7 @@ void PrintCommState(DCB dcb)
 --			Modified for this assignment. 
 --
 /*-----------------------------------------------------------------------------*/
-DWORD WINAPI ProtocolThread(LPVOID n)
+/*DWORD WINAPI ProtocolThread(LPVOID n)
 {
 	
 
@@ -152,39 +150,31 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 
 		if ( isConnected() && !isBufferEmpty() )
 		{
-			if (!isTransmit())
+			if (isTransmit())
 			{
+				TerminateThread(hThrd, 0);
 				//Enter the write mode
-				setTransmitting(true);
+				//setTransmitting(true);
 
 				//Enter write mode
 				WriteMode();
 				setTransmitting(false);
+				hThrd = CreateThread(NULL, 0, ReadThread, (LPVOID)2, 0, &threadID);
 			}
 		}
 	}
 	ExitThread(0);
 	return 0L;
-}
+}*/
 
-DWORD WINAPI ReadThread(LPVOID n)
+DWORD WINAPI ProtocolThread(LPVOID n)
 {
-	Statistics *s = Statistics::GetInstance();
+	
 	char* control;
 
 	while (true)
 	{
-		if (!isTransmit())
-		{
-			if (ReadENQ())
-			{
-				MessageBox(NULL, "GOT ENQ", "ENQ", MB_OK);
-				s->IncrementENQS();				
-				UpdateStats();
-				//ReadMode
-				ReceiveMode();
-			}
-		}
+			ReadENQ();
 	}
 
 	ExitThread(0);
@@ -217,14 +207,18 @@ char * ReadPort(void)
 			}
 		}
 
+
+
 		dwEvtMask = NULL;
 		portInfo.dwRead = 0;
+
 
 	return portInfo.strReceive;
 }
 
 BOOL ReadENQ(void)
 {
+	Statistics *s = Statistics::GetInstance();
 	DWORD dwEvtMask;
 	SetCommMask(portInfo.hComm, EV_RXCHAR);
 	char  ccontrol = '\0';
@@ -256,13 +250,38 @@ BOOL ReadENQ(void)
 		}
 	}
 
-	if (ccontrol == ENQ)
-		return TRUE;
+	char temp[80];
+	if ( ccontrol > 0 )
+	{
+		//sprintf(temp, "got %x when expecting 5 on %s", ccontrol, portInfo.lpszCommName);
+		//MessageBox(NULL, temp, "", MB_OK);
+	}
+
+	if (ccontrol == ENQ && getMode() == WAITING)
+	{
+		s->IncrementENQS();
+		UpdateStats();
+		MessageBox(NULL, "ENQ GET", portInfo.lpszCommName, MB_OK);
+		setMode(READ);
+		ReceiveMode();
+		setMode(WRITE);
+		
+	}
+	else if (ccontrol == ACK && getMode() == WRITE)
+	{
+		s->IncrementACKSReceived();
+		MessageBox(NULL, "ACK GET", portInfo.lpszCommName, MB_OK);
+		UpdateStats();
+		WriteMode();
+		
+	}	
 	else
-		return FALSE;
+		false;
 		
 	dwEvtMask = NULL;
 	portInfo.dwRead = 0;
+
+	return true;
 
 }
 
@@ -340,7 +359,7 @@ void ReceiveMode()
 		if (!WaitForPacket(packet))
 		{
 			//TO1 this will be replaced
-			Sleep(1000);
+			Sleep(100);
 			return;
 		}
 
@@ -390,11 +409,12 @@ void ReceiveMode()
 ------------------------------------------------------------------------------*/
 void WriteMode()
 {
+	MessageBox(NULL, "Got to write mode", "char", MB_OK);
 	char packet[PACKET_SIZE];
 	int miss = 0;
 	char *controlC;
 	Statistics *stats = Statistics::GetInstance();
-
+	setTransmitting(true);
 	//Wait for ACK	
 	controlC = ReceiveControlChar(10);
 
@@ -402,7 +422,7 @@ void WriteMode()
 	if ( controlC[0] == ACK )
 	{
 		MessageBox(NULL,"got a control char", "char", MB_OK);
-		stats->IncrementACKSReceived();		
+		stats->IncrementACKSReceived();
 		UpdateStats();
 			
 		for ( int i = 0; i < MAXSENT; i++)
@@ -690,6 +710,9 @@ char * ReceiveControlChar(double timeout)
 	char *temp ="";
 	DWORD commEvent;
 
+
+	MessageBox(NULL, "Reading for ACK.", "Timeouts", MB_OK);
+
 	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
 
 	commTimeouts->ReadTotalTimeoutMultiplier = 0;
@@ -750,9 +773,15 @@ void setBufferStatus(BOOL status)
 
 BOOL isBufferEmpty()
 {
-	if (portInfo.empty == true)
-	{
-		return true;
-	}
-		return false;
+	return portInfo.empty;
+}
+
+MODE getMode()
+{
+	return portInfo.mode;
+}
+
+void setMode( MODE m )
+{
+	portInfo.mode = m;
 }

@@ -15,6 +15,7 @@
 
 //Physical layer header file
 #include <sstream>
+#include <string>
 #include "Physical.h" 
 #include "Protocol.h"
 #include "Windowsx.h"
@@ -28,7 +29,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void CheckMenu(WPARAM);
 void InstantiateWindow(HINSTANCE);
 void OutputText();
-void OutputText( string );
+void OutputText( std::string );
 void GetCharsFromPort(char * c);
 void ChangeBackgroundColor(HWND, COLORREF);
 void ConnectMode(HMENU);

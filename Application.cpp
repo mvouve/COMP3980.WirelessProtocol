@@ -505,7 +505,6 @@ void CheckMenu(WPARAM wP)
 			//Display chars if the length is greater than 0
 			if ( value > 0 )
 			{
-				int i;
 				char* buf;
 
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
@@ -515,12 +514,12 @@ void CheckMenu(WPARAM wP)
 				{
 					//Enter the write mode
 					setTransmitting(true);
+					setMode(WRITE);
 				}
 				BuildBuffer(buf);
 				BuildPacket();
 				//append the buffer to the global buffer
-				outText.append(buf);			
-
+				outText.append(buf);
 				//Clear the textfield
 				SetDlgItemText(hwnd, IDM_TEXT, "");
 			}
@@ -824,5 +823,5 @@ std::string PrintStats()
 
 void UpdateStats()
 {
-	InitializeUI();
+	UpdateUI();
 }

@@ -65,21 +65,17 @@ int Statistics::GetENQS()
 void Statistics::IncrementACKSSent()
 {
 	ACKSentCount++;
-	return;
 
 }
 
 void Statistics::IncrementACKSReceived()
 {
 	ACKReceivedCount++;
-	return;
-
 }
 
 void Statistics::IncrementNAKS()
 {
 	NAKCount++;
-	return;
 }
 
 

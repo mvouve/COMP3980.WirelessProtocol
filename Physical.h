@@ -32,12 +32,20 @@
 #include <iostream>		// io stream
 #include "Menu.h"		// Menu resources
 #include "crc.h"
+#include "Application.h"
+#include "Protocol.h"
+#include <stdio.h>
 
 using std::string;
 
+enum MODE
+{
+	WAITING = 0,
+	READ = 1,
+	WRITE = 2
+};
 
-
-/* Structure containing every veriable needed by the COM port */
+/* Structure containing every variable needed by the COM port */
 struct PortInfo {
 	HANDLE hComm, hRead, hWrite;
 	LPCSTR lpszCommName;
@@ -50,7 +58,12 @@ struct PortInfo {
 	DCB dcb;
 	OVERLAPPED overlapped;
 	char * strReceive;
+	MODE mode;
 };
+
+
+
+
 
 struct GrapefruitPacket {
 	char status;
@@ -85,5 +98,7 @@ BOOL ReadENQ();
 char * ReceiveControlChar(double);
 void setBufferStatus(BOOL);
 BOOL isBufferEmpty();
+void setMode(MODE m);
+MODE getMode();
 
 #endif
