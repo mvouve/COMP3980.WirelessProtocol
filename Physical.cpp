@@ -16,6 +16,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "Physical.h"
+#include "Session.h"
 
 // MAXIMUM VISABLITIY
 PortInfo portInfo;
@@ -25,6 +26,7 @@ char c[1018];
 GrapefruitPacket GlobalPacket;
 HANDLE hThrd;		// Handle to the read thread
 std::deque<GrapefruitPacket> packetQueue;
+Timeouts t;
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -36,7 +38,10 @@ std::deque<GrapefruitPacket> packetQueue;
 void Connect()
 {
 	DWORD threadID;		// ID for the read thread
+    
+    CalculateTimeouts(&t, dcb.BaudRate);
 	
+    
 	portInfo.strReceive = new char[LINE_SIZE]; // Buffer for received characters
 	memset(portInfo.strReceive, 0, sizeof(portInfo.strReceive)); //Initialize the buffer to null
 
