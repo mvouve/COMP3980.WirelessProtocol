@@ -48,12 +48,12 @@ void Connect()
 	{
 		// Close the thread if there's an error
 		CloseHandle(hThrd);
-		portInfo.transmitting = FALSE;
+		portInfo.mode = WAITING;
 	}
 	else
 	{
 		// Continue transmitting
-		portInfo.transmitting = FALSE;
+		portInfo.mode = WAITING;
 		portInfo.empty = true;
 	}
 
@@ -133,48 +133,15 @@ void PrintCommState(DCB dcb)
 --	RETURN:
 --		Always 0
 --
---	NOTES:	Used function found in the MSDN Serial Communications tutoial,
---			Modified for this assignment. 
+--	NOTES:	This function just reads for control chars that signal a transmission
+--			is about to start.
 --
 /*-----------------------------------------------------------------------------*/
-/*DWORD WINAPI ProtocolThread(LPVOID n)
-{
-	
-
-	HANDLE hThrd;
-	DWORD threadID;
-	hThrd = CreateThread(NULL, 0, ReadThread, (LPVOID)2, 0, &threadID);
-	
-	while (true)
-	{
-
-		if ( isConnected() && !isBufferEmpty() )
-		{
-			if (isTransmit())
-			{
-				TerminateThread(hThrd, 0);
-				//Enter the write mode
-				//setTransmitting(true);
-
-				//Enter write mode
-				WriteMode();
-				setTransmitting(false);
-				hThrd = CreateThread(NULL, 0, ReadThread, (LPVOID)2, 0, &threadID);
-			}
-		}
-	}
-	ExitThread(0);
-	return 0L;
-}*/
-
 DWORD WINAPI ProtocolThread(LPVOID n)
 {
-	
-	char* control;
-
 	while (true)
 	{
-			ReadENQ();
+		ReadControlCharacter();
 	}
 
 	ExitThread(0);
@@ -216,7 +183,7 @@ char * ReadPort(void)
 	return portInfo.strReceive;
 }
 
-BOOL ReadENQ(void)
+void ReadControlCharacter(void)
 {
 	Statistics *s = Statistics::GetInstance();
 	DWORD dwEvtMask;
@@ -250,13 +217,6 @@ BOOL ReadENQ(void)
 		}
 	}
 
-	char temp[80];
-	if ( ccontrol > 0 )
-	{
-		//sprintf(temp, "got %x when expecting 5 on %s", ccontrol, portInfo.lpszCommName);
-		//MessageBox(NULL, temp, "", MB_OK);
-	}
-
 	if (ccontrol == ENQ && getMode() == WAITING)
 	{
 		s->IncrementENQS();
@@ -280,9 +240,6 @@ BOOL ReadENQ(void)
 		
 	dwEvtMask = NULL;
 	portInfo.dwRead = 0;
-
-	return true;
-
 }
 
 /*------------------------------------------------------------------------------
@@ -356,6 +313,7 @@ void ReceiveMode()
 
 	for (int i = 0; i < MAXSENT; i++)
 	{
+		MessageBox(NULL, "Waiting for packet" + i, "packet status", MB_OK);
 		if (!WaitForPacket(packet))
 		{
 			//TO1 this will be replaced
@@ -409,77 +367,63 @@ void ReceiveMode()
 ------------------------------------------------------------------------------*/
 void WriteMode()
 {
-	MessageBox(NULL, "Got to write mode", "char", MB_OK);
 	char packet[PACKET_SIZE];
 	int miss = 0;
 	char *controlC;
 	Statistics *stats = Statistics::GetInstance();
-	setTransmitting(true);
-	//Wait for ACK	
-	controlC = ReceiveControlChar(10);
-
-	//Recieved an ACK
-	if ( controlC[0] == ACK )
-	{
-		MessageBox(NULL,"got a control char", "char", MB_OK);
-		stats->IncrementACKSReceived();
-		UpdateStats();
 			
-		for ( int i = 0; i < MAXSENT; i++)
+	for ( int i = 0; i < MAXSENT; i++)
+	{
+		while ( miss < MAXMISS )
 		{
-			while ( miss < MAXMISS )
+			//Send packet
+			MessageBox(NULL, "sending packet", "packet status", MB_OK);
+
+			packet[0] = GlobalPacket.status;
+			packet[1] = GlobalPacket.sync;
+
+			for (int i = 0 ; i < DATA_SIZE; i++)
 			{
-				//Send packet
-				//MessageBox(NULL, "sending packet", "packet status", MB_OK);
-
-				packet[0] = GlobalPacket.status;
-				packet[1] = GlobalPacket.sync;
-
-				for (int i = 0 ; i < DATA_SIZE; i++)
-				{
-					packet[2 + i] = GlobalPacket.data[i];
-				}
-				for (int i = 0; i < CRC_SIZE; i++)
-				{
-					packet[2 + DATA_SIZE + i] = GlobalPacket.crc[i];
-				}
-
-				WritePort(&packet);
-
-				//Wait for ACK
-				controlC = ReceiveControlChar(1000);
-
-				if (controlC[0] == ACK)
-				{						
-					stats->IncrementACKSReceived();					
-					UpdateStats();
-
-					//ACK Received: update buffer and packetize
-					//Check for EOT
-					if ( GlobalPacket.status == EOT )
-					{
-						
-						//*******************CHANGE LATER*********************
-						setBufferStatus(true);
-						setTransmitting(false);
-						return;
-					}						
-					miss = 0;
-				}
-				//NAK Received: resend data and increment miss
-				else if ( controlC[0] == NAK )
-				{
-					stats->IncrementNAKS();
-					UpdateStats();
-					miss++;
-				}
-				else
-				{
-					stats->IncrementPacketsLost();								
-					UpdateStats();
-				}
+				packet[2 + i] = GlobalPacket.data[i];
+			}
+			for (int i = 0; i < CRC_SIZE; i++)
+			{
+				packet[2 + DATA_SIZE + i] = GlobalPacket.crc[i];
 			}
 
+			WritePort(&packet);
+
+			//Wait for ACK
+			controlC = ReceiveControlChar(1000);
+
+			if (controlC[0] == ACK)
+			{						
+				stats->IncrementACKSReceived();					
+				UpdateStats();
+
+				//ACK Received: update buffer and packetize
+				//Check for EOT
+				if ( GlobalPacket.status == EOT )
+				{
+					
+					//*******************CHANGE LATER*********************
+					setBufferStatus(true);
+					return;
+				}						
+				miss = 0;
+			}
+			//NAK Received: resend data and increment miss
+			else if ( controlC[0] == NAK )
+			{
+				stats->IncrementNAKS();
+				UpdateStats();
+				miss++;
+			}
+			else
+			{
+				stats->IncrementPacketsLost();								
+				UpdateStats();
+			}
 		}
 	}
 	// no ack assumed failed
@@ -655,42 +599,6 @@ BOOL isConnected()
 	return portInfo.connected;
 }
 
-/*------------------------------------------------------------------------------
---	FUNCTION: SetConnected(BOOL connect)
---
---	PURPOSE: Sets the connection status true or false.
---
---	PARAMETERS:
---		connect		- Boolean to tell if were connected to the COM port or not.
---
-/*-----------------------------------------------------------------------------*/
-void setTransmitting(BOOL transmit)
-{
-	Statistics *s = Statistics::GetInstance();
-	if (transmit == true )
-	{
-		s->IncrementENQS();
-		UpdateStats();
-		//Send ENQ to other side
-		char cChar = ENQ;
-		WriteControlChar(cChar);
-	}
-	portInfo.transmitting = transmit;
-}
-
-/*------------------------------------------------------------------------------
---	FUNCTION: isConnected()
---
---	PURPOSE: Returns the connection status true or false.
---
---	RETURN:
---		Always True if currently connected, false if not connected
---
-/*-----------------------------------------------------------------------------*/
-BOOL isTransmit()
-{
-	return portInfo.transmitting;
-}
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: closePort()

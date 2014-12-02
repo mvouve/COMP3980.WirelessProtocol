@@ -510,11 +510,14 @@ void CheckMenu(WPARAM wP)
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
 				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
 
-				if (!isTransmit())
+				if (getMode() == WAITING )
 				{
+					stats = Statistics::GetInstance();
 					//Enter the write mode
-					setTransmitting(true);
 					setMode(WRITE);
+					WriteControlChar(ENQ);
+					stats->IncrementENQS();
+					UpdateStats();
 				}
 				BuildBuffer(buf);
 				BuildPacket();
