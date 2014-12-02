@@ -79,7 +79,6 @@ DWORD WINAPI ProtocolThread(LPVOID);
 char * ReadPort(void);
 BOOL   WritePort(const void *);
 void PacketFactory(char * strToSend);
-GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();

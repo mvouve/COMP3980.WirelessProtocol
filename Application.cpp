@@ -520,7 +520,6 @@ void CheckMenu(WPARAM wP)
 					UpdateStats();
 				}
 				PacketFactory(buf);
-				BuildPacket();
 				//append the buffer to the global buffer
 				outText.append(buf);
 				//Clear the textfield

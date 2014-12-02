@@ -66,9 +66,12 @@ void Connect()
 --	PURPOSE: Set the port settings as configured by the user.
 --
 --		PARAMETERS:
-**		s			-Name of the port the user has selected.
-**		hwnd		-Handle to the program's window.
-**
+--		s			-Name of the port the user has selected.
+--		hwnd		-Handle to the program's window.
+--
+-- PROGRAMMER: Filip Gutica
+--
+-- DESIGNER:   Filip Gutica
 **
 /*-----------------------------------------------------------------------------*/
 
@@ -110,6 +113,24 @@ void SetPortSettings(char *s, HWND hwnd)
 
 }
 
+/*------------------------------------------------------------------------------
+--	FUNCTION: PrintCommState(DCB)
+--
+--	PURPOSE: Function to print information on the comm port
+--
+--		PARAMETERS:
+--		dcb		- Defualt LPVOID parameter for thread function.
+--
+--	RETURN:
+--		void
+
+-- PROGRAMMER: Filip Gutica
+--
+-- DESIGNER:   Filip Gutica
+--
+--	NOTES:	
+--
+/*-----------------------------------------------------------------------------*/
 void PrintCommState(DCB dcb)
 {
 	char s[256] = "";
@@ -133,6 +154,10 @@ void PrintCommState(DCB dcb)
 --
 --	RETURN:
 --		Always 0
+
+-- PROGRAMMER: Filip Gutica
+--
+-- DESIGNER:   Filip Gutica
 --
 --	NOTES:	This function just reads for control chars that signal a transmission
 --			is about to start.
@@ -495,16 +520,18 @@ bool WaitForPacket(char* packet)
 }
 
 /*------------------------------------------------------------------------------
---	FUNCTION: BuildBuffer(char *)
+--	FUNCTION: PacketFactory(char *)
 --
 --	PURPOSE: Packetizes data and puts it in the queue to be sent.
 --
 --	PARAMETERS:
 --		strToSend		- chars to be added to the buffer
 --
--- DESIGNER: Marc Vouve
+-- DESIGNER:	Marc Vouve
+--				Filip Gutica
 --
--- PROGRAMMER: Marc Vouve
+-- PROGRAMMER:	Marc Vouve
+--				Filip Gutica
 --
 -- NOTE: This functions sets the initial status to ETB, it is up to send mode
 --		 to change it to an ETX on the last packet in Queue, or the 10th packet
@@ -527,73 +554,22 @@ void PacketFactory(char * strToSend)
 		/* 
 		CRC STUFF HERE!
 		*/
+		unsigned char packetdata[1020];
+		packetdata[0] = temp.status; packetdata[1] = temp.sync;
+		for(int i =0; i < DATA_SIZE; i++)
+		{
+			packetdata[i+2] = temp.data[i]; 
+		}
+		int crcBits = crcFast(packetdata, 1020);
+		unsigned char *helping = (unsigned char*)&crcBits;
+		temp.crc[0] = helping[3]; temp.crc[1] = helping[2];  temp.crc[2] = helping[1]; temp.crc[3] = helping[0]; 
+
 
 		packetQueue.push_back(temp);
 	}
 }
 
-/*------------------------------------------------------------------------------
---	FUNCTION: BuildPacket(char *)
---
---	PURPOSE: Sends characters to the COM port
---
---	PARAMETERS:
---		strToSend		- chars to be added to the buffer
---
--- DESIGNER: Filip Gutica A00781910
---
---
--- PROGRAMMER: Filip Gutica A00781910
---
-/*-----------------------------------------------------------------------------*/
-GrapefruitPacket BuildPacket()
-{
-	MessageBox( NULL, "Building Packet", "Packet", MB_OK );
-	if (GlobalPacket.sync == SYN1)	GlobalPacket.sync = SYN2;
-	else							GlobalPacket.sync = SYN1;
-	
-	int count = 0;
-	for(count = 0; count < DATA_SIZE && count < sizeof(c)/sizeof(char) ; count++)
-	{
-		
-		GlobalPacket.data[count] = c[count];
-		
-	}
 
-	if (sizeof(c)/sizeof(char) < DATA_SIZE)
-	{
-		GlobalPacket.status = ETB;
-		GlobalPacket.data[count] = ETX;
-		count++;
-		for(int i = count; i < DATA_SIZE ; i++)
-		{
-			GlobalPacket.data[i] = '\0';
-		}
-		
-	} 
-	else 
-	{
-		GlobalPacket.status= EOT;
-	}
-
-	
-	int crcBits = crcFast((unsigned char*)GlobalPacket.data, DATA_SIZE);
-	unsigned char *helping = (unsigned char*)&crcBits;
-	GlobalPacket.crc[0] = helping[3]; GlobalPacket.crc[1] = helping[2];  GlobalPacket.crc[2] = helping[1]; GlobalPacket.crc[3] = helping[0]; 
-
-	//OutputDebugStringA( "" + GlobalPacket.status);
-	//OutputDebugStringA("" + GlobalPacket.sync);
-	
-	//OutputDebugString(GlobalPacket.data);
-
-	
-	OutputDebugString("PACKET");
-
-	OutputDebugString((char*)&GlobalPacket);
-		
-
-	return GlobalPacket;
-}
 
 bool checkPacketCrc(GrapefruitPacket gfp)
 {
