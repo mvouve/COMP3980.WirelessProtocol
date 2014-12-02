@@ -36,6 +36,6 @@ void CommandMode(HMENU);
 void disableMenuItems(HMENU);
 void enableMenuItems(HMENU);
 void PrintStats();
-void InvalidateStats();
+void UpdateStats();
 
 #endif

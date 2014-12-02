@@ -677,7 +677,7 @@ void PrintStats()
 	ReleaseDC(hwnd, hdc);
 }
 
-void InvalidateStats()
+void UpdateStats()
 {
 	RECT *r = new RECT;
 	r->left = 500;
@@ -688,4 +688,5 @@ void InvalidateStats()
 	const RECT *rect = r;
 
 	InvalidateRect(hwnd, rect, true);
+	PrintStats();
 }
