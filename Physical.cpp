@@ -53,9 +53,11 @@ void Connect()
 		portInfo.transmitting = FALSE;
 	}
 	else
+	{
 		// Continue transmitting
 		portInfo.transmitting = FALSE;
 		portInfo.empty = true;
+	}
 
 }
 
