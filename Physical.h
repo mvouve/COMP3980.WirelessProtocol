@@ -81,7 +81,7 @@ void WriteMode();
 void ReceiveMode();
 bool WaitForPacket(char * packet);
 BOOL WriteControlChar( char );
-char * ReadENQ();
+BOOL ReadENQ();
 char * ReceiveControlChar(double);
 void setBufferStatus(BOOL);
 BOOL isBufferEmpty();
