@@ -24,6 +24,7 @@ DCB dcb = { 0 };
 char c[1018];
 GrapefruitPacket GlobalPacket;
 HANDLE hThrd;		// Handle to the read thread
+std::deque<GrapefruitPacket> packetQueue;
 
 /*------------------------------------------------------------------------------
 --	FUNCTION: Connect()
@@ -151,34 +152,40 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 
 char * ReadPort(void)
 {
-	DWORD dwEvtMask;
-	SetCommMask(portInfo.hComm, EV_RXCHAR);
+		Statistics *s = Statistics::GetInstance();
+		DWORD dwEvtMask;
+		SetCommMask(portInfo.hComm, EV_RXCHAR);
 
 		// Wait for a comm event
-		WaitCommEvent(portInfo.hComm, &dwEvtMask,NULL);
-		
-		if (dwEvtMask == EV_RXCHAR)
+		if (WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
 		{
-			//MessageBox(NULL, "Getting packets and stuff", "", MB_OK);
-			
 			// Read in characters if character is found by waitcommevent
-			if (ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead,&(portInfo.overlapped))) 
+			if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead, &portInfo.overlapped))
 			{
-				
-				//GetCharsFromPort(portInfo.strReceive);
-			}
-			else if (GetLastError() == ERROR_IO_PENDING)
-			{
-				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-				//GetCharsFromPort(portInfo.strReceive);
+				if (GetLastError() == ERROR_IO_PENDING)
+				{
+					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				}
 			}
 		}
+		else
+		{
+			GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+			// Read in characters if character is found by waitcommevent
+			if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &(portInfo.dwRead), &portInfo.overlapped))
+			{
+				if (GetLastError() == ERROR_IO_PENDING)
+				{
+					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				}
+			}
 
-
+		}
+		MessageBox(NULL, "PACKET READ FIN", "", MB_OK);
 
 		dwEvtMask = NULL;
 		portInfo.dwRead = 0;
-
+		MessageBox(NULL, portInfo.strReceive, "PACKET", MB_OK);
 
 	return portInfo.strReceive;
 }
@@ -490,32 +497,39 @@ bool WaitForPacket(char* packet)
 /*------------------------------------------------------------------------------
 --	FUNCTION: BuildBuffer(char *)
 --
---	PURPOSE: Sends characters to the COM port
+--	PURPOSE: Packetizes data and puts it in the queue to be sent.
 --
 --	PARAMETERS:
 --		strToSend		- chars to be added to the buffer
 --
--- DESIGNER: Filip Gutica A00781910
+-- DESIGNER: Marc Vouve
 --
+-- PROGRAMMER: Marc Vouve
 --
--- PROGRAMMER: Filip Gutica A00781910
---
+-- NOTE: This functions sets the initial status to ETB, it is up to send mode
+--		 to change it to an ETX on the last packet in Queue, or the 10th packet
+--		 in the queue.
 /*-----------------------------------------------------------------------------*/
-char * BuildBuffer(char * strToSend)
+void PacketFactory(char * strToSend)
 {
-	memset(&c[0], 0, sizeof(c));
-	GlobalPacket.status = '\0';
-	GlobalPacket.sync = '\0';
+	static char syn = SYN1;
+	GrapefruitPacket temp = GrapefruitPacket();
+	temp.status = ETB;
 
-	memset(GlobalPacket.data, 0, sizeof(GlobalPacket.data));
-
-	strcat(c, strToSend);
-
-	//OutputDebugString(c);
-	return strToSend;
-
+	// Itterate through the bytes to send.
+	for (int i = 0; i < strlen(strToSend); i += sizeof( temp.data) )
+	{
+		strncpy( temp.data, strToSend + i, sizeof(temp.data));
+		temp.sync = syn;
+		syn ^= 1;	// swap to other SYN byte
 	
-	
+
+		/* 
+		CRC STUFF HERE!
+		*/
+
+		packetQueue.push_back(temp);
+	}
 }
 
 /*------------------------------------------------------------------------------
@@ -534,7 +548,7 @@ char * BuildBuffer(char * strToSend)
 /*-----------------------------------------------------------------------------*/
 GrapefruitPacket BuildPacket()
 {
-	
+	MessageBox( NULL, "Building Packet", "Packet", MB_OK );
 	if (GlobalPacket.sync == SYN1)	GlobalPacket.sync = SYN2;
 	else							GlobalPacket.sync = SYN1;
 	
@@ -573,9 +587,9 @@ GrapefruitPacket BuildPacket()
 	//OutputDebugString(GlobalPacket.data);
 
 	
-	//OutputDebugStringA(GlobalPacket.crc);
+	OutputDebugString("PACKET");
 
-
+	OutputDebugString((char*)&GlobalPacket);
 		
 
 	return GlobalPacket;

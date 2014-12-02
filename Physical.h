@@ -35,6 +35,7 @@
 #include "Application.h"
 #include "Protocol.h"
 #include <stdio.h>
+#include <deque>
 
 using std::string;
 
@@ -77,7 +78,7 @@ void SetPortSettings(char *, HWND);
 DWORD WINAPI ProtocolThread(LPVOID);
 char * ReadPort(void);
 BOOL   WritePort(const void *);
-char * BuildBuffer(char *);
+void PacketFactory(char * strToSend);
 GrapefruitPacket BuildPacket();
 void PrintCommState(DCB);
 void setConnected(BOOL connect);

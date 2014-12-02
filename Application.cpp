@@ -519,7 +519,7 @@ void CheckMenu(WPARAM wP)
 					stats->IncrementENQS();
 					UpdateStats();
 				}
-				BuildBuffer(buf);
+				PacketFactory(buf);
 				BuildPacket();
 				//append the buffer to the global buffer
 				outText.append(buf);
