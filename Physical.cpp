@@ -176,10 +176,9 @@ DWORD WINAPI ReadThread(LPVOID n)
 	{
 		if (!isTransmit())
 		{
-			control = ReadENQ();
-
-			if (control[0] == ENQ)
-			{		
+			if (ReadENQ())
+			{
+				MessageBox(NULL, "GOT ENQ", "ENQ", MB_OK);
 				s->IncrementENQS();				
 				UpdateStats();
 				//ReadMode
@@ -224,42 +223,47 @@ char * ReadPort(void)
 	return portInfo.strReceive;
 }
 
-char * ReadENQ(void)
+BOOL ReadENQ(void)
 {
 	DWORD dwEvtMask;
 	SetCommMask(portInfo.hComm, EV_RXCHAR);
-	char  ccontrol[1];
+	char  ccontrol = '\0';
 
-		// Wait for a comm event
-		if(WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
+	// Wait for a comm event
+	if(WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
+	{
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, &ccontrol, 1, &portInfo.dwRead, &portInfo.overlapped)) 
 		{
-			// Read in characters if character is found by waitcommevent
-			if (!ReadFile(portInfo.hComm, ccontrol, 1, &portInfo.dwRead, &portInfo.overlapped)) 
+			if (GetLastError() == ERROR_IO_PENDING)
 			{
-				if (GetLastError() == ERROR_IO_PENDING)
-				{
-					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-					//GetCharsFromPort(ccontrol);
-				}
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				//GetCharsFromPort(&ccontrol);
 			}
 		}
-		else
+	}
+	else
+	{
+		GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, &ccontrol, 1, &(portInfo.dwRead), &portInfo.overlapped)) 
 		{
-			GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-			// Read in characters if character is found by waitcommevent
-			if (!ReadFile(portInfo.hComm, ccontrol, 1, &(portInfo.dwRead), &portInfo.overlapped)) 
+			if (GetLastError() == ERROR_IO_PENDING)
 			{
-				if (GetLastError() == ERROR_IO_PENDING)
-				{
-					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-					//GetCharsFromPort(ccontrol);
-				}
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				//GetCharsFromPort(&ccontrol);
 			}
 		}
-		dwEvtMask = NULL;
-		portInfo.dwRead = 0;
+	}
 
-	return ccontrol;
+	if (ccontrol == ENQ)
+		return TRUE;
+	else
+		return FALSE;
+		
+	dwEvtMask = NULL;
+	portInfo.dwRead = 0;
+
 }
 
 /*------------------------------------------------------------------------------
@@ -327,7 +331,7 @@ void ReceiveMode()
 
 	//Send ACK back to them for packet
 
-	WriteControlChar(c);
+	WriteControlChar(ACK);
 	stats->IncrementACKSSent();
 	UpdateStats();
 
@@ -734,7 +738,7 @@ char * ReceiveControlChar(double timeout)
 			OutputDebugString(temp);
 		}
 	}
-		MessageBox(NULL, "HERE", "HERE", MB_OK);
+		//MessageBox(NULL, "HERE", "HERE", MB_OK);
 	portInfo.dwRead = 0;
 	return temp;
 }
