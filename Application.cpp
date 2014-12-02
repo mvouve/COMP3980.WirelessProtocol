@@ -43,7 +43,9 @@ COLORREF backgroundColorConnected = 0xCCFFCC;
 
 HWND hwnd;
 HWND button;
-HWND textField;
+HWND sendDisplay;
+HWND recievedDisplay;
+HINSTANCE hInst;
 HDC hdc;
 string buffer;
 string outText;
@@ -153,6 +155,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 			}
 			EndPaint(hwnd, &paintstruct);
 		break;
+	case WM_SIZE:
+		InitializeUI();
 
 	//Change to colored backgrounds
 	case WM_ERASEBKGND:
@@ -190,11 +194,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 **
 ** DATE:	September 16th, 2014
 **
-** REVISIONS:	 N/A
+** REVISIONS:	 December 1st, 2014 / Moved UI stuff to another function.
 **
 ** DESIGNER:	Filip Gutica
 **
 ** PROGRAMMER:	Filip Gutica
+**				Marc Vouve
 **
 ** INTERFACE:	void InstantiateWindow(HINSTANCE hInst)
 **
@@ -203,7 +208,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 ** NOTES:
 ** This function is called upon window creation to create the
 ** basic window.
-*******************************************************************/
+********************************************************************************/
 void InstantiateWindow(HINSTANCE hInst)
 {
 	WNDCLASSEX Wcl;
@@ -230,39 +235,115 @@ void InstantiateWindow(HINSTANCE hInst)
 	hwnd = CreateWindow(Name, Name, WS_OVERLAPPEDWINDOW ,
 		10, 10, 700, 500, NULL, NULL, hInst, NULL);
 
-
-	button = CreateWindow( 
-				"button", 
-				"Send Message",
-                WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-				//x
-                520,
-				//y
-				370, 
-				//width
-                150, 
-				//height
-				50,
-                hwnd, (HMENU) IDM_SEND_BUTTON,
-                hInst, NULL );
-
-	textField = CreateWindowEx(WS_EX_CLIENTEDGE,
-								"Edit",
-								NULL,
-								WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
-								//x
-								10,
-								//y
-								390, 
-								//width
-								500,
-								//height
-								25,
-								hwnd, (HMENU) IDM_TEXT,
-								hInst, NULL);
-
-
+	InitializeUI();
 }
+
+
+/***********************************************************************************
+ * FUNCTION: InitialiseUI
+ *
+ * DATE: December 1st, 2014
+ *
+ * REVISIONS: N/A
+ *
+ * DESIGNER:    Marc Vouve
+ *
+ * PROGRAMMER:  Filip Gutica
+ *				Rhea Lauzon
+ *              Marc Vouve
+ *
+ * INTERFACE:   void InitialiseUI
+ *
+ * RETURNS:     void
+ *
+ * NOTES:
+ * This function was moved out of WinMain for conveniance and to allow the child
+ * windows to be resized when the main window is resized.
+ *
+ **********************************************************************************/
+void InitializeUI()
+{
+
+	DestroyWindow(recievedDisplay);
+	DestroyWindow(sendDisplay);
+	DestroyWindow(button);
+	// Get the current EXE's hInst, if you're making a DLL with this it wont work.
+	PAINTSTRUCT  paintStruct;
+	HINSTANCE hInst = GetModuleHandle(NULL);
+	RECT clientRect;
+	RECT statsRect;
+	HDC hdc = GetDC(hwnd);
+
+	// Get the users window
+	GetClientRect(hwnd, &clientRect);
+
+	INT windowWidth  = clientRect.right - clientRect.left;
+	INT windowHeight = clientRect.bottom - clientRect.top;
+	statsRect.bottom = clientRect.bottom;
+	statsRect.top = clientRect.top + ( windowHeight / 20 ) * 10;
+	statsRect.left = clientRect.left + (windowWidth / 20) * 8;
+	statsRect.right = clientRect.right + (windowWidth / 20) * 12;
+
+	
+	HDC PaintDC = BeginPaint(hwnd, &paintStruct );
+
+	
+	
+	// Display area for messages recieved.
+	recievedDisplay = CreateWindowA(
+		"EDIT",
+		buffer.c_str(),
+		WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | ES_READONLY  | ES_MULTILINE,
+		//x
+		10,
+		//y
+		10,
+		//width
+		(windowWidth / 20 ) * 8 - 10,
+		//height
+		windowHeight - 20,
+		hwnd, NULL,
+		hInst, NULL
+		);
+
+	sendDisplay = CreateWindow(
+		"EDIT",
+		NULL,
+		WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE,
+		(windowWidth / 20) * 12,
+		10,
+		( windowWidth / 20 ) * 8,
+		windowHeight - 20,
+		hwnd, (HMENU)IDM_TEXT,
+		hInst, NULL
+		);
+
+
+	// Send button
+	button = CreateWindow(
+		"button",
+		"Send Message",
+		WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+		//x
+		(windowWidth / 2) - 60,
+		//y
+		(windowHeight / 2 ) - 60,
+		//width
+		120,
+		//height
+		40,
+		hwnd, (HMENU)IDM_SEND_BUTTON,
+		hInst, NULL
+		);
+	SetBkColor(hdc, currentBackground);
+	
+	DrawText(hdc, PrintStats().c_str(), -1, &statsRect, 0 );
+	//TextOut(PaintDC, clientRect.right + ( windowWidth / 2 ), windowHeight / 2, PrintStats(), sizeof(PrintStats()));
+
+	EndPaint( hwnd, &paintStruct );
+	ReleaseDC(hwnd, hdc);
+}
+
 
 /**********************************************************************************
 **	FUNCTION: CheckMenu
@@ -332,14 +413,17 @@ void CheckMenu(WPARAM wP)
 			{
 				int i;
 				char* buf;
-				setBufferStatus(false);
 
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
 				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
 
+				if (!isTransmit())
+				{
+					//Enter the write mode
+					setTransmitting(true);
+				}
 				BuildBuffer(buf);
 				BuildPacket();
-				
 				//append the buffer to the global buffer
 				outText.append(buf);			
 
@@ -621,72 +705,30 @@ void enableMenuItems(HMENU menuHandle)
 ** Notes:
 ** This function prints the stats recorded from the protocol.
 *******************************************************************/
-void PrintStats()
+std::string PrintStats()
 {
-	hdc = GetDC(hwnd);
 	std::stringstream s;
-	SetBkMode(hdc, TRANSPARENT);
 
-	//Print ENQS
-	s << "ENQS: " <<  stats->GetENQS();
-	TextOut(hdc, 500, 0, s.str().c_str(), s.str().length());
+	// Add number of ENQs
+	s << "ENQS: " << stats->GetENQS() << "\r\n";
+	// Add number of ACKs
+	s << "ACKS Sent: " << stats->GetACKSent() << "\r\n";
+	s << "ACKS Received: " << stats->GetACKReceived() << "\r\n";
+	// Add number of NAKs
+	s << "NAKS: " << stats->GetNAKS() << "\r\n";
+	// Add number of Sent
+	s << "Sent: " << stats->GetPacketsSent() << "\r\n";
+	// Add number of Lost Packets
+	s << "Lost: " << stats->GetPacketsLost() << "\r\n";
+	// Add number of Recieved packets
+	s << "Received: " << stats->GetReceived() << "\r\n";
+	// Add number of received packets corrupted
+	s << "Corrupted Packets: " << stats->GetReceived() << "\r\n";
 
-	s.str("");
-	//Print ACKS
-	s << "ACKS Sent: " <<  stats->GetACKSent();
-	TextOut(hdc, 500, 20, s.str().c_str(), s.str().length());
-
-	
-	//Print ACKS
-	s.str("");
-	s << "ACKS Received: " <<  stats->GetACKReceived();
-	TextOut(hdc, 500, 40, s.str().c_str(), s.str().length());
-
-	//Print NAKS
-	s.str("");
-	s << "NAKS: " <<  stats->GetNAKS();
-	TextOut(hdc, 500, 60, s.str().c_str(), s.str().length());
-
-	//Print NAKS
-	s.str("");
-	s << "NAKS: " <<  stats->GetNAKS();
-	TextOut(hdc, 500, 80, s.str().c_str(), s.str().length());
-
-	//Print PacketsSent
-	s.str("");
-	s << "Sent: " <<  stats->GetPacketsSent();
-	TextOut(hdc, 500, 100, s.str().c_str(), s.str().length());
-
-	//Print PacketsLost
-	s.str("");
-	s << "Lost: " <<  stats->GetPacketsLost();
-	TextOut(hdc, 500, 120, s.str().c_str(), s.str().length());
-
-
-	//Print Received
-	s.str("");
-	s << "Received: " <<  stats->GetReceived();
-	TextOut(hdc, 500, 140, s.str().c_str(), s.str().length());
-
-	//Print Received Corrupted
-	s.str("");
-	s << "Corrutped Packets: " <<  stats->GetReceivedC();
-	TextOut(hdc, 500, 160, s.str().c_str(), s.str().length());
-
-
-	ReleaseDC(hwnd, hdc);
+	return ( s.str() );
 }
 
 void UpdateStats()
 {
-	RECT *r = new RECT;
-	r->left = 500;
-	r->right = 700;
-	r->top = 0;
-	r->bottom = 180;
-
-	const RECT *rect = r;
-
-	InvalidateRect(hwnd, rect, true);
-	PrintStats();
+	InitializeUI();
 }

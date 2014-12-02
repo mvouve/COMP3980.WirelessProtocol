@@ -35,7 +35,8 @@ void ConnectMode(HMENU);
 void CommandMode(HMENU);
 void disableMenuItems(HMENU);
 void enableMenuItems(HMENU);
-void PrintStats();
+std::string PrintStats();
 void UpdateStats();
+void InitializeUI();
 
 #endif
