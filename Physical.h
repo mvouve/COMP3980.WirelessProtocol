@@ -92,6 +92,7 @@ void ReadControlCharacter();
 char * ReceiveControlChar(double);
 void setBufferStatus(BOOL);
 BOOL isBufferEmpty();
+BOOL got(char, double);
 void setMode(MODE m);
 MODE getMode();
 

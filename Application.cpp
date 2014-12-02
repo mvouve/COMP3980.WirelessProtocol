@@ -514,8 +514,10 @@ void CheckMenu(WPARAM wP)
 				{
 					stats = Statistics::GetInstance();
 					//Enter the write mode
-					setMode(WRITE);
 					WriteControlChar(ENQ);
+
+					setMode(WRITE);
+					
 					stats->IncrementENQS();
 					UpdateStats();
 				}

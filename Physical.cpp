@@ -165,9 +165,28 @@ void PrintCommState(DCB dcb)
 /*-----------------------------------------------------------------------------*/
 DWORD WINAPI ProtocolThread(LPVOID n)
 {
+	Statistics *s = Statistics::GetInstance();
 	while (true)
 	{
-		ReadControlCharacter();
+		//ReadControlCharacter();
+
+		if (got(ACK, 10000) && getMode() == WRITE)
+		{
+			s->IncrementACKSReceived();
+			UpdateStats();
+			WriteMode();
+		}
+		else if (got(ENQ, 10000) && getMode() == READ)
+		{
+			s->IncrementENQS();
+			UpdateStats();
+			setMode(READ);
+			ReceiveMode();
+			setMode(WAITING);
+		}
+		else
+			false;
+		
 	}
 
 	ExitThread(0);
@@ -274,7 +293,9 @@ void ReadControlCharacter(void)
 		}
 	}
 
-	if (ccontrol == ENQ && getMode() == WAITING)
+
+
+	/*if (ccontrol == ENQ && getMode() == WAITING)
 	{
 		s->IncrementENQS();
 		UpdateStats();
@@ -290,11 +311,78 @@ void ReadControlCharacter(void)
 		
 	}	
 	else
-		false;
+		false;*/
 		
 	dwEvtMask = NULL;
 	portInfo.dwRead = 0;
 }
+
+BOOL got(char c, double timeout)
+{
+	DWORD dwEvtMask;
+	SetCommMask(portInfo.hComm, EV_RXCHAR);
+	char  ccontrol = '\0';
+
+	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
+
+	commTimeouts->ReadTotalTimeoutMultiplier = 0;
+	commTimeouts->ReadTotalTimeoutConstant = timeout;
+
+	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
+	{
+		MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
+		return FALSE;
+	}
+	
+	if (!SetCommMask(portInfo.hComm, EV_RXCHAR))
+	{
+		MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
+		return FALSE;
+	}
+
+
+	//clear port
+	PurgeComm(portInfo.hComm, PURGE_RXCLEAR);	
+	PurgeComm(portInfo.hComm, PURGE_TXCLEAR);
+	PurgeComm(portInfo.hComm, PURGE_TXABORT);	
+	PurgeComm(portInfo.hComm, PURGE_RXABORT);
+
+	// Wait for a comm event
+	if(WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
+	{
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, &ccontrol, 1, &portInfo.dwRead, &portInfo.overlapped)) 
+		{
+			if (GetLastError() == ERROR_IO_PENDING)
+			{
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				//GetCharsFromPort(&ccontrol);
+			}
+		}
+	}
+	else
+	{
+		GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, &ccontrol, 1, &(portInfo.dwRead), &portInfo.overlapped)) 
+		{
+			if (GetLastError() == ERROR_IO_PENDING)
+			{
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+				//GetCharsFromPort(&ccontrol);
+			}
+		}
+	}
+	dwEvtMask = NULL;
+	portInfo.dwRead = 0;
+
+	if (ccontrol == c)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+
 
 /*------------------------------------------------------------------------------
 -- FUNCTION: WritePort( void * message )
@@ -425,65 +513,73 @@ void ReceiveMode()
 -- PROGRAMMER: Rhea Lauzon A00848381
 --
 --
+--
 ------------------------------------------------------------------------------*/
 void WriteMode()
 {
 	char packet[PACKET_SIZE];
 	int miss = 0;
-	char *controlC;
 	Statistics *stats = Statistics::GetInstance();
-			
-	for ( int i = 0; i < MAXSENT; i++)
+	GrapefruitPacket temp = GrapefruitPacket();
+
+	if (!packetQueue.empty())
 	{
-		while ( miss < MAXMISS )
+
+		temp = packetQueue.front();
+
+			
+		for ( int i = 0; i < MAXSENT; i++)
 		{
-			//Send packet
-			MessageBox(NULL, "sending packet", "packet status", MB_OK);
-
-			packet[0] = GlobalPacket.status;
-			packet[1] = GlobalPacket.sync;
-
-			for (int i = 0 ; i < DATA_SIZE; i++)
+			while ( miss < MAXMISS )
 			{
-				packet[2 + i] = GlobalPacket.data[i];
-			}
-			for (int i = 0; i < CRC_SIZE; i++)
-			{
-				packet[2 + DATA_SIZE + i] = GlobalPacket.crc[i];
-			}
+				//Send packet
+				MessageBox(NULL, "sending packet", "packet status", MB_OK);
 
-			WritePort(&packet);
+				packet[0] = temp.status;
+				packet[1] = temp.sync;
 
-			//Wait for ACK
-			controlC = ReceiveControlChar(1000);
-
-			if (controlC[0] == ACK)
-			{						
-				stats->IncrementACKSReceived();					
-				UpdateStats();
-
-				//ACK Received: update buffer and packetize
-				//Check for EOT
-				if ( GlobalPacket.status == EOT )
+				for (int i = 0 ; i < DATA_SIZE; i++)
 				{
+					packet[2 + i] = temp.data[i];
+				}
+				for (int i = 0; i < CRC_SIZE; i++)
+				{
+					packet[2 + DATA_SIZE + i] = temp.crc[i];
+				}
+
+				WritePort(&packet);
+
+				//Wait for ACK
+
+				if (got(ACK, 1000))
+				{						
+					stats->IncrementACKSReceived();					
+					UpdateStats();
+					packetQueue.pop_front();
+
+					//ACK Received: update buffer and packetize
+					//Check for EOT
+					if ( temp.status == EOT )
+					{
 					
-					//*******************CHANGE LATER*********************
-					setBufferStatus(true);
-					return;
-				}						
-				miss = 0;
-			}
-			//NAK Received: resend data and increment miss
-			else if ( controlC[0] == NAK )
-			{
-				stats->IncrementNAKS();
-				UpdateStats();
-				miss++;
-			}
-			else
-			{
-				stats->IncrementPacketsLost();								
-				UpdateStats();
+						//*******************CHANGE LATER*********************
+						setBufferStatus(true);
+						return;
+					}						
+					miss = 0;
+				}
+				//NAK Received: resend data and increment miss
+				else if ( got(NAK, 1000) )
+				{
+					stats->IncrementNAKS();
+					UpdateStats();
+					miss++;
+				}
+				else
+				{
+					stats->IncrementPacketsLost();								
+					UpdateStats();
+				}
 			}
 		}
 	}
@@ -567,6 +663,7 @@ void PacketFactory(char * strToSend)
 
 		packetQueue.push_back(temp);
 	}
+	
 }
 
 
