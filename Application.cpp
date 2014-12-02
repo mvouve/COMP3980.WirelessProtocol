@@ -156,8 +156,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message,
 			EndPaint(hwnd, &paintstruct);
 		break;
 	case WM_SIZE:
-		InitializeUI();
-
+		if ( sendDisplay != NULL )
+			UpdateUI();
+		break;
 	//Change to colored backgrounds
 	case WM_ERASEBKGND:
 		HPEN pen;
@@ -264,9 +265,7 @@ void InstantiateWindow(HINSTANCE hInst)
 void InitializeUI()
 {
 
-	DestroyWindow(recievedDisplay);
-	DestroyWindow(sendDisplay);
-	DestroyWindow(button);
+
 	// Get the current EXE's hInst, if you're making a DLL with this it wont work.
 	PAINTSTRUCT  paintStruct;
 	HINSTANCE hInst = GetModuleHandle(NULL);
@@ -283,10 +282,12 @@ void InitializeUI()
 	statsRect.top = clientRect.top + ( windowHeight / 20 ) * 10;
 	statsRect.left = clientRect.left + (windowWidth / 20) * 8;
 	statsRect.right = clientRect.right + (windowWidth / 20) * 12;
-
 	
 	HDC PaintDC = BeginPaint(hwnd, &paintStruct );
 
+	DestroyWindow(recievedDisplay);
+	DestroyWindow(sendDisplay);
+	DestroyWindow(button);
 	
 	
 	// Display area for messages recieved.
@@ -332,7 +333,7 @@ void InitializeUI()
 		120,
 		//height
 		40,
-		hwnd, (HMENU)IDM_SEND_BUTTON,
+		hwnd, (HMENU) IDM_SEND_BUTTON,
 		hInst, NULL
 		);
 	SetBkColor(hdc, currentBackground);
@@ -342,6 +343,99 @@ void InitializeUI()
 
 	EndPaint( hwnd, &paintStruct );
 	ReleaseDC(hwnd, hdc);
+}
+
+
+/***********************************************************************************
+* FUNCTION: InitialiseUI
+*
+* DATE: December 1st, 2014
+*
+* REVISIONS: N/A
+*
+* DESIGNER:    Marc Vouve
+*
+* PROGRAMMER:  Filip Gutica
+*				Rhea Lauzon
+*              Marc Vouve
+*
+* INTERFACE:   void InitialiseUI
+*
+* RETURNS:     void
+*
+* NOTES:
+* This function was moved out of WinMain for conveniance and to allow the child
+* windows to be resized when the main window is resized.
+*
+**********************************************************************************/
+void UpdateUI()
+{
+
+
+	// Get the current EXE's hInst, if you're making a DLL with this it wont work.
+	PAINTSTRUCT  paintStruct;
+	HINSTANCE hInst = GetModuleHandle(NULL);
+	RECT clientRect;
+	RECT statsRect;
+	HDC hdc = GetDC(hwnd);
+
+	// Get the users window
+	GetClientRect(hwnd, &clientRect);
+
+	INT windowWidth = clientRect.right - clientRect.left;
+	INT windowHeight = clientRect.bottom - clientRect.top;
+	statsRect.bottom = clientRect.bottom;
+	statsRect.top = clientRect.top + (windowHeight / 20) * 10;
+	statsRect.left = clientRect.left + (windowWidth / 20) * 8;
+	statsRect.right = clientRect.right + (windowWidth / 20) * 12;
+
+
+
+
+	// Display area for messages recieved.
+	MoveWindow(
+		recievedDisplay,
+		//x
+		clientRect.left + 10,
+		//y
+		clientRect.top + 10,
+		//width
+		(windowWidth / 20) * 8 - 10,
+		//height
+		windowHeight - 20,
+		0
+		);
+
+	MoveWindow(
+		sendDisplay,
+		(windowWidth / 20) * 12,
+		10,
+		(windowWidth / 20) * 8,
+		windowHeight - 20,
+		0
+		);
+
+
+	// Send button
+	MoveWindow(
+		button,
+		//x
+		(windowWidth / 2) - 60,
+		//y
+		(windowHeight / 2) - 60,
+		//width
+		120,
+		//height
+		40,
+		0
+		);
+	SetBkColor(hdc, currentBackground);
+
+	DrawText(hdc, PrintStats().c_str(), -1, &statsRect, 0);
+	//TextOut(PaintDC, clientRect.right + ( windowWidth / 2 ), windowHeight / 2, PrintStats(), sizeof(PrintStats()));
+
+	ReleaseDC(hwnd, hdc);
+	UpdateWindow(hwnd);
 }
 
 

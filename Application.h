@@ -38,5 +38,6 @@ void enableMenuItems(HMENU);
 std::string PrintStats();
 void UpdateStats();
 void InitializeUI();
+void UpdateUI();
 
 #endif
