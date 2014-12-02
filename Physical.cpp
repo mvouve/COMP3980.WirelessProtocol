@@ -55,6 +55,7 @@ void Connect()
 	else
 		// Continue transmitting
 		portInfo.transmitting = FALSE;
+		portInfo.empty = true;
 
 }
 
@@ -146,9 +147,14 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 	
 	while (true)
 	{
+
+		if (isBufferEmpty() == false)
+		{
+			MessageBox(NULL, "thing", "thing", MB_OK);
+		}
 		if ( isConnected() && !isBufferEmpty() )
 		{
-			if (!isTransmit()  )
+			if (!isTransmit())
 			{
 				MessageBox(NULL, "Transmitting", "yay!", MB_OK);
 				//Enter the write mode
@@ -443,7 +449,7 @@ void WriteMode()
 					{
 						
 						//*******************CHANGE LATER*********************
-						setBufferStatus(false);
+						setBufferStatus(true);
 						setTransmitting(false);
 						return;
 					}						
@@ -761,7 +767,7 @@ void setBufferStatus(BOOL status)
 
 BOOL isBufferEmpty()
 {
-	if (portInfo.empty = true)
+	if (portInfo.empty == true)
 	{
 		return true;
 	}

@@ -332,7 +332,7 @@ void CheckMenu(WPARAM wP)
 			{
 				int i;
 				char* buf;
-				setBufferStatus(true);
+				setBufferStatus(false);
 
 				buf = (char*)GlobalAlloc(GPTR, value + 1);
 				GetDlgItemText(hwnd, IDM_TEXT, buf, value + 1);	
