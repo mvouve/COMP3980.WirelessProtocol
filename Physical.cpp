@@ -338,8 +338,7 @@ void ReceiveMode()
 	char c = ACK;
 	Statistics *stats = Statistics::GetInstance();
 
-	//Send ACK back to them for packet
-
+	//Respond to sender with ACK and await packet.
 	WriteControlChar(ACK);
 	stats->IncrementACKSSent();
 	UpdateStats();
@@ -349,8 +348,6 @@ void ReceiveMode()
 		MessageBox(NULL, "Waiting for packet" + i, "packet status", MB_OK);
 		if (!WaitForPacket(packet))
 		{
-			//TO1 this will be replaced
-			Sleep(100);
 			return;
 		}
 
@@ -359,8 +356,7 @@ void ReceiveMode()
 		{
 			
 			// checks if the second packet character is a syn bit 
-			if (packet[1] != syn || ( i == 0 && ( packet[1] == SYN1 || packet[1]
-				== SYN2 ) ) )
+			if (packet[1] != syn || ( i == 0 && ( packet[1] == SYN1 || packet[1] == SYN2 ) ) )
 			{
 				//MessageBox(NULL,"GOT A PACKEET", "packet", MB_OK);
 				(packet[1] == SYN1 ? syn = SYN2 : syn = SYN1); // flip SYN.
