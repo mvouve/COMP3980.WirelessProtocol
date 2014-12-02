@@ -183,6 +183,31 @@ char * ReadPort(void)
 	return portInfo.strReceive;
 }
 
+/*-------------------------------------------------------------------------------------
+-- FUNCTION ReadControlCharacter
+--
+-- PURPOSE:    When the thread has not begun transmission this function attempts to read
+--			   control characters in constantly. If the thread is put into write mode by
+--			   the user it will look for and ACK, otherwise it will look for an ENQ
+--			   if the function gets the character it's looking for it will proceed to
+--			   Write/Read Mode functions, if it doesn't it will continue back to the
+--			   loop.
+--
+--
+-- DATE:	   Novement 28th
+--		
+-- REVISIONS:  December 2nd: Adapted for double threaded application.
+--
+--
+--
+-- PROGRAMMER: Filip Gutica
+--			   Marc Vouve
+--
+-- DESIGNER:   Filip Gutica
+--			   Marc Vouve
+--
+--
+-------------------------------------------------------------------------------------*/
 void ReadControlCharacter(void)
 {
 	Statistics *s = Statistics::GetInstance();
@@ -221,16 +246,13 @@ void ReadControlCharacter(void)
 	{
 		s->IncrementENQS();
 		UpdateStats();
-		MessageBox(NULL, "ENQ GET", portInfo.lpszCommName, MB_OK);
 		setMode(READ);
 		ReceiveMode();
-		setMode(WRITE);
-		
+		setMode(WAITING);
 	}
 	else if (ccontrol == ACK && getMode() == WRITE)
 	{
 		s->IncrementACKSReceived();
-		MessageBox(NULL, "ACK GET", portInfo.lpszCommName, MB_OK);
 		UpdateStats();
 		WriteMode();
 		
@@ -245,15 +267,14 @@ void ReadControlCharacter(void)
 /*------------------------------------------------------------------------------
 -- FUNCTION: WritePort( void * message )
 --
--- PURPOSE:  This is a helper function for writing Packets/Control Characters
---           to the port.
+-- PURPOSE:  This is a helper function for writing Packets to the port.
+--
+-- 
 --
 --
+-- DESIGNER:   Marc Vouve 
 --
--- DESIGNER: Marc Vouve A00848381
---
---
--- PROGRAMMER: Marc Vouve A00848381
+-- PROGRAMMER: Marc Vouve 
 --
 --
 ------------------------------------------------------------------------------*/
@@ -264,6 +285,17 @@ BOOL WritePort( const void * message )
 }
 
 
+/*------------------------------------------------------------------------------
+-- FUNCTION: WritePort( void * message )
+--
+-- PURPOSE:  This is a helper function for writing Control chars to the port
+--
+-- DESIGNER:   Marc Vouve 
+--
+-- PROGRAMMER: Marc Vouve 
+--
+--
+------------------------------------------------------------------------------*/
 BOOL WriteControlChar( char control )
 {
 	if (!WriteFile(portInfo.hComm, &control, 1, &(portInfo.dwWritten), &(portInfo.overlapped)))
@@ -290,10 +322,11 @@ BOOL WriteControlChar( char control )
 --           it will try to read MAXSET times, and if it fails it will fall back
 --			 to the invoking function
 --
--- DESIGNER:
+-- DESIGNER:   Marc Vouve
 --
+-- PROGRAMMER: Marc Vouve 
 --
--- PROGRAMMER: Marc Vouve A00848381
+-- DATE:       NOVEMBER 24th 2014
 --
 --
 ------------------------------------------------------------------------------*/

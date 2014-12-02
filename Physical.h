@@ -42,7 +42,8 @@ enum MODE
 {
 	WAITING = 0,
 	READ = 1,
-	WRITE = 2
+	WRITE = 2,
+	STANDBY = 3	// Standby == Idle can not start write yet.
 };
 
 /* Structure containing every variable needed by the COM port */
