@@ -291,7 +291,7 @@ void InitializeUI()
 	
 	
 	// Display area for messages recieved.
-	recievedDisplay = CreateWindowA(
+	/*recievedDisplay = CreateWindowA(
 		"EDIT",
 		buffer.c_str(),
 		WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | ES_READONLY  | ES_MULTILINE,
@@ -305,7 +305,7 @@ void InitializeUI()
 		windowHeight - 20,
 		hwnd, NULL,
 		hInst, NULL
-		);
+		);*/
 
 	sendDisplay = CreateWindow(
 		"EDIT",
@@ -521,7 +521,7 @@ void CheckMenu(WPARAM wP)
 				}
 				PacketFactory(buf);
 				//append the buffer to the global buffer
-				outText.append(buf);
+				//outText.append(buf);
 				//Clear the textfield
 				SetDlgItemText(hwnd, IDM_TEXT, "");
 			}
@@ -556,6 +556,7 @@ void GetCharsFromPort(char *c)
 {
 	//strcat((char *)buffer.c_str(), c);
 	buffer += c;
+	OutputDebugString(c);
 	InvalidateRect(hwnd, NULL, FALSE);
 }
 
@@ -596,41 +597,7 @@ void OutputText()
 	ReleaseDC(hwnd, hdc);					 
 }
 
-/**********************************************************************************
-**	FUNCTION: OutputText()
-**
-** DATE: September 16th, 2014
-**
-** REVISIONS:	N/A
-**
-** DESIGNER:	Filip Gutica
-**
-** PROGRAMMER:	Filip Gutica
-**
-** INTERFACE:	void OutputText(char *buffer)
-**
-** RETURNS:	void
-**
-** NOTES:
-** This functions displays a buffer's contents to the screen
-************************************************************************************/
-void OutputText(string buffer)
-{
-	GetClientRect(hwnd, &txtWindow);
-	hdc = GetDC(hwnd);
 
-	//Change background to transparent
-	SetBkMode(hdc, TRANSPARENT);
-
-	DrawText(hdc, buffer.c_str(), 
-			strlen(buffer.c_str()), 
-			&txtWindow, 
-			// Set the formatting of the drawn text
-			DT_EDITCONTROL | DT_WORDBREAK );
-
-	// Makes the text wrap around the window.
-	ReleaseDC(hwnd, hdc);					 
-}
 
 
 

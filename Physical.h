@@ -77,7 +77,7 @@ void SetPortSettings(char *, HWND);
 DWORD WINAPI ProtocolThread(LPVOID);
 char * ReadPort(double);
 BOOL   WritePort(const void *);
-void PacketFactory(char * strToSend);
+GrapefruitPacket PacketFactory(char * strToSend);
 void PrintCommState(DCB);
 void setConnected(BOOL connect);
 BOOL isConnected();
@@ -94,5 +94,6 @@ BOOL isBufferEmpty();
 BOOL got(char, double);
 void setMode(MODE m);
 MODE getMode();
+BOOL checkPacketCrc(char*);
 
 #endif

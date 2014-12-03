@@ -29,7 +29,6 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void CheckMenu(WPARAM);
 void InstantiateWindow(HINSTANCE);
 void OutputText();
-void OutputText( std::string );
 void GetCharsFromPort(char * c);
 void ChangeBackgroundColor(HWND, COLORREF);
 void ConnectMode(HMENU);
