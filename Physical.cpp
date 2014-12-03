@@ -177,22 +177,10 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 	Statistics *s = Statistics::GetInstance();
 	while (true)
 	{
-<<<<<<< HEAD
 		
 		ReadControlCharacter();
 
-=======
-		if (getMode() != WRITE)
-			ReadControlCharacter();
-
-		if (getMode() == WRITE && got(ACK, t.TO2))
-		{
-			s->IncrementACKSReceived();
-			UpdateStats();
-			WriteMode();
->>>>>>> 2b835680e100524c00d2f4a166de2516d10190cc
 		
-		}	
 	}
 
 	ExitThread(0);
@@ -336,10 +324,6 @@ void ReadControlCharacter(void)
 		setMode(WAITING);
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 2b835680e100524c00d2f4a166de2516d10190cc
 	if (ccontrol == ENQ && getMode() == WAITING)
 	{
 		s->IncrementENQS();
@@ -348,7 +332,6 @@ void ReadControlCharacter(void)
 		ReceiveMode();
 		setMode(WAITING);
 	}
-<<<<<<< HEAD
 	else if (ccontrol == ACK && getMode() == WRITE )
 	{
 		s->IncrementACKSReceived();
@@ -356,8 +339,6 @@ void ReadControlCharacter(void)
 		WriteMode();
 		setMode(WAITING);
 	}
-=======
->>>>>>> 2b835680e100524c00d2f4a166de2516d10190cc
 	
 	else
 		false;
