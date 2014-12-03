@@ -76,7 +76,7 @@ struct GrapefruitPacket {
 void Connect();
 void SetPortSettings(char *, HWND);
 DWORD WINAPI ProtocolThread(LPVOID);
-char * ReadPort(void);
+char * ReadPort(double);
 BOOL   WritePort(const void *);
 void PacketFactory(char * strToSend);
 void PrintCommState(DCB);

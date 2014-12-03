@@ -173,25 +173,16 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 	Statistics *s = Statistics::GetInstance();
 	while (true)
 	{
-		//ReadControlCharacter();
+		if (getMode() != WRITE)
+			ReadControlCharacter();
 
-		if (got(ACK, 10000) && getMode() == WRITE)
+		if (getMode() == WRITE && got(ACK, t.TO2))
 		{
 			s->IncrementACKSReceived();
 			UpdateStats();
 			WriteMode();
-		}
-		else if (got(ENQ, 10000) && getMode() == READ)
-		{
-			s->IncrementENQS();
-			UpdateStats();
-			setMode(READ);
-			ReceiveMode();
-			setMode(WAITING);
-		}
-		else
-			false;
 		
+		}	
 	}
 
 	ExitThread(0);
@@ -199,42 +190,68 @@ DWORD WINAPI ProtocolThread(LPVOID n)
 }
 
 
-char * ReadPort(void)
+char * ReadPort(double timeout)
 {
 		Statistics *s = Statistics::GetInstance();
 		DWORD dwEvtMask;
 		SetCommMask(portInfo.hComm, EV_RXCHAR);
 
-		// Wait for a comm event
-		if (WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
+		
+	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
+
+	commTimeouts->ReadTotalTimeoutMultiplier = 0;
+	commTimeouts->ReadTotalTimeoutConstant = timeout;
+
+
+
+	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
+	{
+		//MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
+		return FALSE;
+	}
+	
+	if (!SetCommMask(portInfo.hComm, EV_RXCHAR))
+	{
+		//MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
+		return FALSE;
+	}
+
+	
+	//clear port
+	PurgeComm(portInfo.hComm, PURGE_RXCLEAR);	
+	PurgeComm(portInfo.hComm, PURGE_TXCLEAR);
+	PurgeComm(portInfo.hComm, PURGE_TXABORT);	
+	PurgeComm(portInfo.hComm, PURGE_RXABORT);
+	// Wait for a comm event
+	if (WaitCommEvent(portInfo.hComm, &dwEvtMask, &portInfo.overlapped))
+	{
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead, &portInfo.overlapped))
 		{
-			// Read in characters if character is found by waitcommevent
-			if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &portInfo.dwRead, &portInfo.overlapped))
+			if (GetLastError() == ERROR_IO_PENDING)
 			{
-				if (GetLastError() == ERROR_IO_PENDING)
-				{
-					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-				}
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
 			}
 		}
-		else
+	}
+	else
+	{
+		GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
+		// Read in characters if character is found by waitcommevent
+		if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &(portInfo.dwRead), &portInfo.overlapped))
 		{
-			GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-			// Read in characters if character is found by waitcommevent
-			if (!ReadFile(portInfo.hComm, portInfo.strReceive, sizeof(GrapefruitPacket), &(portInfo.dwRead), &portInfo.overlapped))
+			if (GetLastError() == ERROR_IO_PENDING)
 			{
-				if (GetLastError() == ERROR_IO_PENDING)
-				{
-					GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
-				}
+				GetOverlappedResult(portInfo.hComm, &(portInfo.overlapped), &(portInfo.dwRead), TRUE);
 			}
-
 		}
-		MessageBox(NULL, "PACKET READ FIN", "", MB_OK);
 
-		dwEvtMask = NULL;
-		portInfo.dwRead = 0;
-		MessageBox(NULL, portInfo.strReceive, "PACKET", MB_OK);
+	}
+	//MessageBox(NULL, "PACKET READ FIN", "", MB_OK);
+
+	dwEvtMask = NULL;
+	portInfo.dwRead = 0;
+	//MessageBox(NULL, portInfo.strReceive, "PACKET", MB_OK);
 
 	return portInfo.strReceive;
 }
@@ -300,7 +317,7 @@ void ReadControlCharacter(void)
 
 
 
-	/*if (ccontrol == ENQ && getMode() == WAITING)
+	if (ccontrol == ENQ && getMode() == WAITING)
 	{
 		s->IncrementENQS();
 		UpdateStats();
@@ -308,15 +325,9 @@ void ReadControlCharacter(void)
 		ReceiveMode();
 		setMode(WAITING);
 	}
-	else if (ccontrol == ACK && getMode() == WRITE)
-	{
-		s->IncrementACKSReceived();
-		UpdateStats();
-		WriteMode();
-		
-	}	
+	
 	else
-		false;*/
+		false;
 		
 	dwEvtMask = NULL;
 	portInfo.dwRead = 0;
@@ -335,13 +346,13 @@ BOOL got(char c, double timeout)
 
 	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
 	{
-		MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
+		//MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
 		return FALSE;
 	}
 	
 	if (!SetCommMask(portInfo.hComm, EV_RXCHAR))
 	{
-		MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
+		//MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
 		return FALSE;
 	}
 
@@ -470,7 +481,7 @@ void ReceiveMode()
 
 	for (int i = 0; i < MAXSENT; i++)
 	{
-		MessageBox(NULL, "Waiting for packet" + i, "packet status", MB_OK);
+		//MessageBox(NULL, "Waiting for packet" + i, "packet status", MB_OK);
 		if (!WaitForPacket(packet))
 		{
 			return;
@@ -538,7 +549,7 @@ void WriteMode()
 			while ( miss < MAXMISS )
 			{
 				//Send packet
-				MessageBox(NULL, "sending packet", "packet status", MB_OK);
+				//MessageBox(NULL, "sending packet", "packet status", MB_OK);
 
 				packet[0] = temp.status;
 				packet[1] = temp.sync;
@@ -556,7 +567,7 @@ void WriteMode()
 
 				//Wait for ACK
 
-				if (got(ACK, 1000))
+				if (got(ACK, t.TO3))
 				{						
 					stats->IncrementACKSReceived();					
 					UpdateStats();
@@ -615,7 +626,7 @@ void WriteMode()
 ------------------------------------------------------------------------------*/
 bool WaitForPacket(char* packet)
 {
-	packet = ReadPort();
+	packet = ReadPort(t.TO1);
 	//MessageBox(NULL, "got packet", "asdf", MB_OK);
 	return true;
 }
@@ -740,7 +751,7 @@ char * ReceiveControlChar(double timeout)
 	DWORD commEvent;
 
 
-	MessageBox(NULL, "Reading for ACK.", "Timeouts", MB_OK);
+	//MessageBox(NULL, "Reading for ACK.", "Timeouts", MB_OK);
 
 	LPCOMMTIMEOUTS commTimeouts = new COMMTIMEOUTS();
 
@@ -749,13 +760,13 @@ char * ReceiveControlChar(double timeout)
 
 	if (!SetCommTimeouts(portInfo.hComm, commTimeouts))
 	{
-		MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
+		//MessageBox(NULL, "Unable to set timeouts.", "Timeouts", MB_OK);
 		return "";
 	}
 	
 	if (!SetCommMask(portInfo.hComm, EV_RXCHAR))
 	{
-		MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
+		//MessageBox(NULL, "Error setting comm mask", "Comm Mask Error", MB_OK);
 		return "";
 	}
 
