@@ -36,6 +36,7 @@
 #include "Protocol.h"
 #include <stdio.h>
 #include <deque>
+#include <time.h>
 
 using std::string;
 
@@ -59,10 +60,8 @@ struct PortInfo {
 	OVERLAPPED overlapped;
 	char * strReceive;
 	MODE mode;
+	time_t timeout;
 };
-
-
-
 
 
 struct GrapefruitPacket {
